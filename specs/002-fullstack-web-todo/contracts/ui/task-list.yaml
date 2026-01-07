@@ -1,0 +1,124 @@
+# Task List UI Contract
+
+**Version**: 1.0.0
+**Related Spec**: [spec.md](spec.md)
+
+## Layout
+
+### Desktop (1024px+)
+```
++----------------------------------+
+|  [Logo]     [Search______]       |
+|             [Filter v]           |
+|                                  |
+|  [New Task]                      |
+|                                  |
+|  +----------------------------+  |
+|  | [x] Task 1          [Edit] |  |
+|  +----------------------------+  |
+|  +----------------------------+  |
+|  | [ ] Task 2          [Edit] |  |
+|  +----------------------------+  |
+|                                  |
+|  [1-2 of 2 tasks]  [< Prev] [>]  |
++----------------------------------+
+```
+
+### Mobile (320px - 1023px)
+```
++--------------------+
+| [Logo]  [Search]   |
+| [Filter v]         |
+|                    |
+| [New Task]         |
+|                    |
+| [x] Task 1         |
+|      [Edit][Del]   |
+|                    |
+| [ ] Task 2         |
+|      [Edit][Del]   |
+|                    |
+| [< Prev] [>]       |
++--------------------+
+```
+
+## Components
+
+### Header
+- Logo (left)
+- Search bar (right, expandable on mobile)
+- Filter dropdown (right, next to search)
+
+### Task Item
+
+| Element | Description |
+|---------|-------------|
+| Checkbox | Toggle completion |
+| Title | Task title (truncate if > 100 chars) |
+| Priority badge | Low (green), Medium (yellow), High (red) |
+| Due date | Show with overdue indicator |
+| Edit button | Opens edit modal |
+| Delete button | Shows confirmation dialog |
+
+### Priority Indicators
+- Low: Green (#00ff88)
+- Medium: Yellow (#ffaa00)
+- High: Red (#ff0066)
+
+### Empty State
+When no tasks exist:
+```
++--------------------+
+|                    |
+|     No tasks yet   |
+|                    |
+|  [Create Task]     |
+|                    |
++--------------------+
+```
+
+## Interactions
+
+### Checkbox Click
+- Toggle task.completed
+- Animate strikethrough
+- Update UI immediately (optimistic)
+
+### New Task Button
+- Opens modal with form
+- Fields: Title, Description, Priority, Due Date
+
+### Edit Button
+- Opens modal pre-filled with task data
+- Same form as Create
+
+### Delete Button
+- Shows confirmation dialog
+- Delete on confirm
+- Animate removal from list
+
+### Search Input
+- Debounced (300ms)
+- Searches title and description
+- Real-time filtering
+
+### Filter Dropdown
+- Options: All, Active, Completed
+- By Priority: All, Low, Medium, High
+
+## Animations
+
+- List item enter: 200ms slide-in
+- List item exit: 200ms fade-out
+- Checkbox toggle: 150ms scale
+- Modal enter: 300ms scale-in
+- Modal exit: 200ms fade-out
+
+## Theme
+
+- Background: #0a0a0f (dark)
+- Card bg: #1a1a2e
+- Text: #ffffff
+- Completed text: #666666
+- Checkbox checked: #00f0ff
+- Hover: #2d2d44
