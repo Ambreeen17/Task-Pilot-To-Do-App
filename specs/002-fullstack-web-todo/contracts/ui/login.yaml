@@ -1,0 +1,81 @@
+# Login Page UI Contract
+
+**Version**: 1.0.0
+**Related Spec**: [spec.md](spec.md)
+
+## Layout
+
+### Desktop (1024px+)
+```
++----------------------------------+
+|        [Logo]                    |
+|                                  |
+|     Email    [____________]      |
+|     Password [____________]      |
+|                                  |
+|     [ Sign In ]                  |
+|                                  |
+|     New here? Create account     |
++----------------------------------+
+```
+
+### Mobile (320px - 1023px)
+```
++--------------------+
+|     [Logo]         |
+|                    |
+|  Email  [______]   |
+|  Pass   [______]   |
+|                    |
+|  [ Sign In ]       |
+|                    |
+|  Create account    |
++--------------------+
+```
+
+## Components
+
+### Form Fields
+
+| Field | Type | Validation | Error Message |
+|-------|------|------------|---------------|
+| Email | email input | Valid email format | Please enter a valid email |
+| Password | password input | Min 8 characters | Password must be at least 8 characters |
+
+### Buttons
+
+| Button | Action | State |
+|--------|--------|-------|
+| Sign In | Submit form | Disabled if form invalid |
+| Create account | Navigate to /signup | - |
+
+## States
+
+### Loading
+- Show spinner on Sign In button
+- Disable form inputs
+- Disable submit button
+
+### Error
+- Show error toast notification
+- Highlight invalid fields
+
+### Success
+- Redirect to /tasks
+- Store JWT token
+
+## Animations
+
+- Fade in on page load (300ms)
+- Smooth input focus transitions (150ms)
+- Button hover state (200ms)
+- Error shake animation (300ms)
+
+## Theme
+
+- Background: #0a0a0f (dark)
+- Primary: #00f0ff (cyan neon)
+- Secondary: #ff00ff (magenta neon)
+- Text: #ffffff
+- Input background: #1a1a2e
+- Border: #2d2d44

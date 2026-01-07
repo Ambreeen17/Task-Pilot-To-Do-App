@@ -1,0 +1,38 @@
+import os
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.src.database import init_db
+from backend.src.routers import auth as auth_router
+from backend.src.routers import tasks as tasks_router
+
+load_dotenv()
+
+app = FastAPI(title="2do Phase 2 API", version="1.0.0")
+
+origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"] ,
+    allow_headers=["*"] ,
+)
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    init_db()
+
+
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok"}
+
+
+app.include_router(auth_router.router)
+app.include_router(tasks_router.router)
