@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.src.database import init_db
-from backend.src.routers import auth as auth_router
-from backend.src.routers import tasks as tasks_router
+from .database import init_db
+from .routers import auth as auth_router
+from .routers import tasks as tasks_router
 
 load_dotenv()
 

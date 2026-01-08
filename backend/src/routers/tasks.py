@@ -5,10 +5,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, and_, col, func, or_, select
 
-from backend.src.dependencies import get_current_user, get_db, get_task_or_404
-from backend.src.models.task import Task
-from backend.src.models.user import User
-from backend.src.schemas.task import TaskCreate, TaskListResponse, TaskResponse, TaskUpdate
+from ..dependencies import get_current_user, get_db, get_task_or_404
+from ..models.task import Task
+from ..models.user import User
+from ..schemas.task import TaskCreate, TaskListResponse, TaskResponse, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
