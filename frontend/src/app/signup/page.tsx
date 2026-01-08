@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -51,46 +52,83 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] px-6 py-16 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 px-6 py-16 text-white">
       {toast ? <Toast kind={toast.kind} message={toast.message} /> : null}
 
-      <div className="mx-auto flex max-w-md flex-col items-center gap-6">
-        <div className="text-2xl font-semibold tracking-tight">2do</div>
-        <Card title="Create account">
-          <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              error={emailError}
-              placeholder="you@example.com"
-              autoComplete="email"
-            />
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              error={passwordError}
-              placeholder="••••••••"
-              autoComplete="new-password"
-            />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mx-auto flex max-w-md flex-col items-center gap-8"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="text-center"
+        >
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            TODO APP
+          </h1>
+          <p className="mt-2 text-sm text-white/60">Organize your life, one task at a time</p>
+        </motion.div>
 
-            <Button type="submit" loading={submitting} disabled={!canSubmit} variant="secondary">
-              Create account
-            </Button>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="w-full"
+        >
+          <Card
+            title="Create Account"
+            className="border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl"
+          >
+            <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+              <Input
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                error={emailError}
+                placeholder="you@example.com"
+                autoComplete="email"
+                className="bg-white/5 border-white/10"
+              />
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={passwordError}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                className="bg-white/5 border-white/10"
+              />
 
-            <button
-              type="button"
-              className="text-sm text-white/70 hover:text-white"
-              onClick={() => router.push("/login")}
-            >
-              Already have an account? Sign in
-            </button>
-          </form>
-        </Card>
-      </div>
+              <Button
+                type="submit"
+                loading={submitting}
+                disabled={!canSubmit}
+                variant="secondary"
+                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/25"
+              >
+                Create Account
+              </Button>
+
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="text-sm text-white/70 hover:text-white transition-colors"
+                onClick={() => router.push("/login")}
+              >
+                Already have an account?{" "}
+                <span className="font-semibold text-cyan-400 hover:text-cyan-300">Sign in</span>
+              </motion.button>
+            </form>
+          </Card>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

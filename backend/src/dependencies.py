@@ -5,10 +5,10 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session, select
 
-from backend.src.auth import decode_token
-from backend.src.database import get_session
-from backend.src.models.task import Task
-from backend.src.models.user import User
+from .auth import decode_token
+from .database import get_session
+from .models.task import Task
+from .models.user import User
 
 security = HTTPBearer()
 

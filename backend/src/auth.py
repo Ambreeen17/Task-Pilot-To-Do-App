@@ -8,12 +8,9 @@ from passlib.context import CryptContext
 
 load_dotenv()
 
-JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-key-change-in-production")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
-
-if not JWT_SECRET:
-    raise RuntimeError("JWT_SECRET is not set")
 
 # passlib bcrypt backend can be flaky on some Windows/Python combos.
 # pbkdf2_sha256 is widely supported and avoids bcrypt's 72-byte limit gotchas.
