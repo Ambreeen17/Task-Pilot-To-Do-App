@@ -180,7 +180,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 px-6 py-12 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950 px-6 py-12 text-white">
       {toast ? <Toast kind={toast.kind} message={toast.message} /> : null}
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -211,7 +211,7 @@ export default function TasksPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+          <Card className="border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl">
             <div className="flex flex-col gap-6 p-6">
               <motion.div
                 className="flex flex-col gap-3 sm:flex-row sm:items-end"
@@ -231,7 +231,7 @@ export default function TasksPage() {
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-white/80 font-medium">Status</span>
                   <select
-                    className="rounded-xl border border-white/10 bg-black px-4 py-2.5 text-white font-sans transition-all hover:border-cyan-500/50 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                    className="rounded-xl border border-white/10 bg-black/40 bg-gradient-to-r from-cyan-500/5 to-purple-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-cyan-500/50 hover:bg-black/50 hover:shadow-lg hover:shadow-cyan-500/10 focus:border-cyan-500 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 backdrop-blur-sm"
                     value={status}
                     onChange={(e) => setStatus(e.target.value as "" | "completed" | "incomplete")}
                   >
@@ -243,7 +243,7 @@ export default function TasksPage() {
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-white/80 font-medium">Priority</span>
                   <select
-                    className="rounded-xl border border-white/10 bg-black px-4 py-2.5 text-white font-sans transition-all hover:border-purple-500/50 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    className="rounded-xl border border-white/10 bg-black/40 bg-gradient-to-r from-purple-500/5 to-pink-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-purple-500/50 hover:bg-black/50 hover:shadow-lg hover:shadow-purple-500/10 focus:border-purple-500 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-purple-500/20 backdrop-blur-sm"
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as "" | TaskPriority)}
                   >
@@ -280,7 +280,7 @@ export default function TasksPage() {
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-white/80 font-medium">Priority</span>
                   <select
-                    className="rounded-xl border border-white/10 bg-black px-4 py-2.5 text-white font-sans transition-all hover:border-pink-500/50 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
+                    className="rounded-xl border border-white/10 bg-black/40 bg-gradient-to-r from-pink-500/5 to-purple-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-pink-500/50 hover:bg-black/50 hover:shadow-lg hover:shadow-pink-500/10 focus:border-pink-500 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-pink-500/20 backdrop-blur-sm"
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
                   >
