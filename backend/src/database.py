@@ -13,7 +13,19 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     DATABASE_URL = "sqlite:///./dev.db"
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = None  # Will be initialized in init_engine()
+
+
+def init_engine():
+    """Initialize the database engine. Call this after import if needed."""
+    global engine
+    if engine is None:
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+    return engine
+
+
+# Initialize engine on module load
+init_engine()
 
 
 def init_db() -> None:

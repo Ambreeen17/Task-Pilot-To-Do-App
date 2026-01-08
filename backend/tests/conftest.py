@@ -12,7 +12,7 @@ os.environ.setdefault("JWT_ALGORITHM", "HS256")
 os.environ.setdefault("JWT_EXPIRATION_HOURS", "24")
 
 from backend.src.main import app  # noqa: E402
-from backend.src.database import get_session  # noqa: E402
+from backend.src.database import get_session, engine as global_engine  # noqa: E402
 
 
 @pytest.fixture(name="engine")
@@ -20,13 +20,16 @@ def engine_fixture():
     # Use StaticPool so all sessions share the same in-memory DB connection.
     from sqlalchemy.pool import StaticPool
 
-    engine = create_engine(
+    test_engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    SQLModel.metadata.create_all(engine)
-    return engine
+    # Override the global engine in database.py so all code uses the same engine
+    from backend.src import database
+    database.engine = test_engine
+    SQLModel.metadata.create_all(test_engine)
+    return test_engine
 
 
 @pytest.fixture(name="db")
