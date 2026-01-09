@@ -81,7 +81,7 @@ export default function SignupPage() {
         >
           <Card
             title="Create Account"
-            className="border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl"
+            className="border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl max-w-md"
           >
             <form className="flex flex-col gap-5" onSubmit={onSubmit}>
               <Input

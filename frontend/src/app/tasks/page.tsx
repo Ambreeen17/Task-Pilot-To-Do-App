@@ -26,7 +26,7 @@ const itemVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 300,
       damping: 24,
     },
@@ -211,7 +211,7 @@ export default function TasksPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl">
+          <Card className="border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl max-w-none">
             <div className="flex flex-col gap-6 p-6">
               <motion.div
                 className="flex flex-col gap-3 sm:flex-row sm:items-end"
