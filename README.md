@@ -259,13 +259,30 @@ Deleted task 2
 Goodbye!
 ```
 
-### Phase 2+: Web UI (Coming Soon)
+### Phase 2: Web UI
+
+#### Production Deployment
+
+**Frontend (Vercel)**
+- 🌐 Live at: https://frontend-ordvthoae-ambreen-rais-projects.vercel.app
+
+**Backend (Render)**
+- See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions
+- Deploy via Render Blueprint using `backend/render.yaml`
+
+#### Local Development
 
 ```bash
-# Start development server
-npm run dev          # Frontend (Next.js)
-uvicorn app.main:app --reload  # Backend (FastAPI)
+# Backend
+cd backend
+pip install -r requirements.txt
+uvicorn src.main:app --reload
+# Access at http://localhost:8000
 
+# Frontend
+cd frontend
+npm install
+npm run dev
 # Access at http://localhost:3000
 ```
 
