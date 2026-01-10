@@ -1,0 +1,661 @@
+openapi: 3.0.3
+info:
+  title: AI Summaries & Insights API
+  description: Task summary generation and productivity insights for Phase 3 AI-Assisted Todo
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+  - url: https://todo-backend.onrender.com/api/v1
+    description: Production
+
+paths:
+  /ai/summaries:
+    get:
+      summary: List user's task summaries
+      description: Returns generated summaries for authenticated user
+      operationId: listSummaries
+      tags:
+        - Summaries
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period_type
+          in: query
+          description: Filter by period type
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, custom, all]
+            default: all
+        - name: limit
+          in: query
+          description: Maximum summaries to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SummaryList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Generate new task summary
+      description: |
+        Generates AI summary for specified time period.
+        Requires minimum 7 days of task history.
+
+        Rate limit: 20 summary generations/user/day
+      operationId: generateSummary
+      tags:
+        - Summaries
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateSummaryRequest'
+            examples:
+              daily:
+                summary: Daily summary
+                value:
+                  period_type: "daily"
+                  start_date: "2026-01-10"
+                  end_date: "2026-01-10"
+              weekly:
+                summary: Weekly summary
+                value:
+                  period_type: "weekly"
+                  start_date: "2026-01-04"
+                  end_date: "2026-01-10"
+              monthly:
+                summary: Monthly summary
+                value:
+                  period_type: "monthly"
+                  start_date: "2026-01-01"
+                  end_date: "2026-01-31"
+      responses:
+        '201':
+          description: Summary generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Insufficient data for summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "insufficient_data"
+                message: "Minimum 7 days of task history required for summaries"
+                details:
+                  days_available: 3
+                  minimum_required: 7
+        '429':
+          description: Summary generation rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "rate_limit_exceeded"
+                message: "Maximum 20 summary generations per day"
+                reset_time: "2026-01-11T00:00:00Z"
+        '503':
+          $ref: '#/components/responses/AIServiceUnavailable'
+
+  /ai/summaries/{summary_id}:
+    get:
+      summary: Get specific summary
+      description: Returns detailed summary by ID
+      operationId: getSummary
+      tags:
+        - Summaries
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SummaryId'
+      responses:
+        '200':
+          description: Summary details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Summary belongs to different user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ai/insights:
+    get:
+      summary: Get active insights for user
+      description: Returns non-dismissed productivity insights
+      operationId: listInsights
+      tags:
+        - Insights
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: insight_type
+          in: query
+          description: Filter by insight type
+          schema:
+            type: string
+            enum:
+              - overdue_pattern
+              - productivity_trend
+              - priority_imbalance
+              - completion_streak
+              - workload_warning
+              - time_management
+              - recurring_task
+              - other
+              - all
+            default: all
+        - name: priority
+          in: query
+          description: Filter by priority
+          schema:
+            type: string
+            enum: [Low, Medium, High, all]
+            default: all
+      responses:
+        '200':
+          description: List of active insights
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Generate new insights
+      description: |
+        Analyzes task history and generates new productivity insights.
+        Requires minimum 10 tasks and 7 days of history.
+
+        Rate limit: 10 insight generations/user/day
+      operationId: generateInsights
+      tags:
+        - Insights
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lookback_days:
+                  type: integer
+                  minimum: 7
+                  maximum: 90
+                  default: 30
+                  description: Number of days to analyze
+              example:
+                lookback_days: 30
+      responses:
+        '201':
+          description: Insights generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insights:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AIInsight'
+                  message:
+                    type: string
+                    example: "3 new insights generated"
+              example:
+                insights:
+                  - id: 50
+                    insight_type: "overdue_pattern"
+                    title: "Overdue tasks increasing"
+                    priority: "High"
+                  - id: 51
+                    insight_type: "productivity_trend"
+                    title: "Completion rate improving"
+                    priority: "Medium"
+                message: "2 new insights generated"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Insufficient data for insights
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "insufficient_data"
+                message: "Minimum 10 tasks and 7 days of history required"
+                details:
+                  tasks_count: 5
+                  minimum_tasks: 10
+                  days_available: 3
+                  minimum_days: 7
+        '429':
+          description: Insight generation rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "rate_limit_exceeded"
+                message: "Maximum 10 insight generations per day"
+        '503':
+          $ref: '#/components/responses/AIServiceUnavailable'
+
+  /ai/insights/{insight_id}:
+    get:
+      summary: Get specific insight
+      description: Returns detailed insight by ID
+      operationId: getInsight
+      tags:
+        - Insights
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InsightId'
+      responses:
+        '200':
+          description: Insight details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIInsight'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Insight belongs to different user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ai/insights/{insight_id}/dismiss:
+    post:
+      summary: Dismiss insight
+      description: Marks insight as dismissed (removes from active list)
+      operationId: dismissInsight
+      tags:
+        - Insights
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/InsightId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Optional feedback on why dismissed
+                  example: "Already addressed this issue"
+      responses:
+        '200':
+          description: Insight dismissed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Insight dismissed"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    TaskSummary:
+      type: object
+      required:
+        - id
+        - user_id
+        - period_type
+        - start_date
+        - end_date
+        - metrics
+        - summary_text
+        - generated_at
+      properties:
+        id:
+          type: integer
+          example: 25
+        user_id:
+          type: integer
+          example: 7
+        period_type:
+          type: string
+          enum: [daily, weekly, monthly, custom]
+          example: "weekly"
+        start_date:
+          type: string
+          format: date
+          example: "2026-01-04"
+        end_date:
+          type: string
+          format: date
+          example: "2026-01-10"
+        metrics:
+          $ref: '#/components/schemas/SummaryMetrics'
+        summary_text:
+          type: string
+          description: AI-generated natural language summary
+          example: "Great week! You completed 15 out of 18 tasks (83% completion rate). High-priority tasks were handled promptly, with an average completion time of 2.3 days. You're on track with your productivity goals."
+        generated_at:
+          type: string
+          format: date-time
+          example: "2026-01-10T15:00:00Z"
+
+    SummaryMetrics:
+      type: object
+      required:
+        - total_tasks
+        - completed
+        - pending
+        - overdue
+        - completion_rate
+        - priority_distribution
+      properties:
+        total_tasks:
+          type: integer
+          description: Total tasks in period
+          example: 18
+        completed:
+          type: integer
+          description: Completed tasks
+          example: 15
+        pending:
+          type: integer
+          description: Pending tasks
+          example: 2
+        overdue:
+          type: integer
+          description: Overdue tasks
+          example: 1
+        completion_rate:
+          type: number
+          format: float
+          description: Completion rate (0.0-1.0)
+          example: 0.83
+        priority_distribution:
+          type: object
+          description: Tasks by priority level
+          properties:
+            Low:
+              type: integer
+              example: 6
+            Medium:
+              type: integer
+              example: 8
+            High:
+              type: integer
+              example: 4
+        tasks_by_day:
+          type: object
+          description: Task count by date
+          additionalProperties:
+            type: integer
+          example:
+            "2026-01-04": 3
+            "2026-01-05": 2
+            "2026-01-06": 0
+            "2026-01-07": 4
+            "2026-01-08": 3
+            "2026-01-09": 2
+            "2026-01-10": 4
+        average_completion_time_hours:
+          type: number
+          format: float
+          nullable: true
+          description: Average hours to complete tasks
+          example: 55.2
+
+    SummaryList:
+      type: object
+      required:
+        - summaries
+        - total
+        - limit
+        - offset
+      properties:
+        summaries:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskSummary'
+        total:
+          type: integer
+          example: 15
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+
+    GenerateSummaryRequest:
+      type: object
+      required:
+        - period_type
+        - start_date
+        - end_date
+      properties:
+        period_type:
+          type: string
+          enum: [daily, weekly, monthly, custom]
+          example: "weekly"
+        start_date:
+          type: string
+          format: date
+          description: Period start (inclusive)
+          example: "2026-01-04"
+        end_date:
+          type: string
+          format: date
+          description: Period end (inclusive)
+          example: "2026-01-10"
+
+    AIInsight:
+      type: object
+      required:
+        - id
+        - user_id
+        - insight_type
+        - title
+        - description
+        - supporting_data
+        - priority
+        - created_at
+      properties:
+        id:
+          type: integer
+          example: 50
+        user_id:
+          type: integer
+          example: 7
+        insight_type:
+          type: string
+          enum:
+            - overdue_pattern
+            - productivity_trend
+            - priority_imbalance
+            - completion_streak
+            - workload_warning
+            - time_management
+            - recurring_task
+            - other
+          example: "overdue_pattern"
+        title:
+          type: string
+          maxLength: 200
+          example: "Overdue tasks increasing"
+        description:
+          type: string
+          example: "You have 5 overdue tasks, averaging 3.2 days past due. Consider setting earlier due dates or breaking tasks into smaller chunks."
+        supporting_data:
+          type: object
+          description: Evidence and metrics (varies by insight type)
+          additionalProperties: true
+          example:
+            overdue_count: 5
+            average_overdue_days: 3.2
+            affected_priorities: ["High", "Medium"]
+            suggested_action: "Set earlier due dates"
+        priority:
+          type: string
+          enum: [Low, Medium, High]
+          example: "High"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-10T15:00:00Z"
+        dismissed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When user dismissed (null if active)
+          example: null
+
+    InsightList:
+      type: object
+      required:
+        - insights
+        - total
+      properties:
+        insights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AIInsight'
+        total:
+          type: integer
+          description: Total active insights
+          example: 3
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "validation_error"
+        message:
+          type: string
+          example: "Invalid request"
+        details:
+          type: object
+          additionalProperties: true
+
+  parameters:
+    SummaryId:
+      name: summary_id
+      in: path
+      required: true
+      description: Summary identifier
+      schema:
+        type: integer
+      example: 25
+
+    InsightId:
+      name: insight_id
+      in: path
+      required: true
+      description: Insight identifier
+      schema:
+        type: integer
+      example: 50
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "unauthorized"
+            message: "Valid authentication token required"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "not_found"
+            message: "Resource not found"
+
+    AIServiceUnavailable:
+      description: AI service is temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "ai_service_unavailable"
+            message: "AI service is temporarily unavailable. Try again later."
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Phase 2 authentication
+
+tags:
+  - name: Summaries
+    description: Task summary generation and retrieval
+  - name: Insights
+    description: Productivity insights and pattern detection

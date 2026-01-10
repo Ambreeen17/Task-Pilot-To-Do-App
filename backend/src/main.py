@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import init_db
 from .routers import auth as auth_router
 from .routers import tasks as tasks_router
+from .routers import ai as ai_router
 
 load_dotenv()
 
@@ -21,7 +22,7 @@ async def lifespan(app: FastAPI):
     pass
 
 
-app = FastAPI(title="2do Phase 2 API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="2do Phase 3 API", version="2.0.0", lifespan=lifespan)
 
 origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000")
 origins = [o.strip() for o in origins_env.split(",") if o.strip()]
@@ -42,3 +43,4 @@ def health() -> dict:
 
 app.include_router(auth_router.router)
 app.include_router(tasks_router.router)
+app.include_router(ai_router.router)
