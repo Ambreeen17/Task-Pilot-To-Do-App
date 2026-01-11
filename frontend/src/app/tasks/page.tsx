@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/Toast";
+import { AIInterpretationPanel } from "@/components/ai/AIInterpretationPanel";
 import { clearToken, getToken } from "@/lib/auth";
 import { createTask, deleteTask, listTasks, toggleTask, type Task, type TaskPriority } from "@/lib/api";
+import { parseNaturalLanguage } from "@/services/aiApi";
+import { ParseResponse } from "@/types/ai";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -70,6 +73,11 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  // AI-Assisted Todo State
+  const [naturalInput, setNaturalInput] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseResult, setParseResult] = useState<ParseResponse | null>(null);
+
   useEffect(() => {
     const t = getToken();
     setToken(t);
@@ -107,6 +115,43 @@ export default function TasksPage() {
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, filteredQuery]);
+
+  // AI Parsing Handler
+  async function onParse(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!token) return;
+    if (!naturalInput.trim()) return;
+
+    setIsParsing(true);
+    setParseResult(null);
+
+    try {
+      const result = await parseNaturalLanguage(token, naturalInput);
+      setParseResult(result);
+
+      // Clear manual fields if any
+      setNewTitle("");
+      setNewDesc("");
+    } catch (err) {
+      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "AI Parsing failed";
+      setToast({ kind: "error", message: msg });
+    } finally {
+      setIsParsing(false);
+    }
+  }
+
+  // Handle successful AI task creation
+  function onAIConfirm(task: Task) {
+    setTasks((prev) => [task, ...prev]);
+    setParseResult(null);
+    setNaturalInput("");
+    setToast({ kind: "success", message: "Task created successfully with AI!" });
+  }
+
+  // Handle AI rejection
+  function onAICancel() {
+    setParseResult(null);
+  }
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -255,14 +300,68 @@ export default function TasksPage() {
                 </label>
               </motion.div>
 
+
+              {/* AI-Assisted Task Creation Section */}
+              <AnimatePresence>
+                {parseResult ? (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <AIInterpretationPanel
+                      parseResponse={parseResult}
+                      token={token}
+                      onConfirm={onAIConfirm}
+                      onCancel={onAICancel}
+                      className="mb-6 border-cyan-500/30"
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.form
+                    onSubmit={onParse}
+                    className="flex flex-col gap-3 border-b border-white/10 pb-6 mb-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                     <div className="flex items-center gap-2 mb-1">
+                      <div className="text-sm font-semibold text-white/90 uppercase tracking-wider bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                        ✨ AI Task Creator
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Input
+                          label=""
+                          value={naturalInput}
+                          onChange={(e) => setNaturalInput(e.target.value)}
+                          placeholder="e.g., 'Review quarterly report with Sarah tomorrow at 2pm high priority'"
+                          className="bg-white/5 border-white/10 focus:border-purple-500/50"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        loading={isParsing}
+                        disabled={!naturalInput.trim()}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white min-w-[100px]"
+                      >
+                         Magic
+                      </Button>
+                    </div>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+
               <motion.form
                 onSubmit={onCreate}
-                className="flex flex-col gap-3 border-t border-white/10 pt-6"
+                className="flex flex-col gap-3 pt-2"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <div className="text-sm font-semibold text-white/90 uppercase tracking-wider">Create New Task</div>
+                <div className="text-sm font-semibold text-white/90 uppercase tracking-wider">Manual Entry</div>
                 <Input
                   label="Title"
                   value={newTitle}
