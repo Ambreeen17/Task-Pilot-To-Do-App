@@ -1,0 +1,64 @@
+openapi: 3.0.0
+info:
+  title: Phase 4 Autonomy API
+  version: 1.0.0
+paths:
+  /monitor/settings:
+    get:
+      summary: Get user autonomy preferences
+      responses:
+        '200':
+          description: Settings object
+    put:
+      summary: Update user autonomy preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferences'
+
+  /monitor/logs:
+    get:
+      summary: Get AI activity history
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of log entries
+
+  /ai/analyze:
+    post:
+      summary: Trigger AI analysis of current state
+      description: Returns suggestions based on tasks and patterns
+      responses:
+        '200':
+          description: List of suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Suggestion'
+
+components:
+  schemas:
+    UserPreferences:
+      type: object
+      properties:
+        autonomy_level:
+          type: string
+          enum: [low, medium, high]
+    Suggestion:
+      type: object
+      properties:
+        type:
+          type: string
+        message:
+          type: string
+        reasoning:
+          type: string
+        proposed_action:
+          type: object
