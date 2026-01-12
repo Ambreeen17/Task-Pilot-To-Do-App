@@ -2,7 +2,7 @@ import uuid
 
 from sqlmodel import select
 
-from backend.src.models.user import User
+from src.models.user import User
 
 
 def test_register_success(client, db):

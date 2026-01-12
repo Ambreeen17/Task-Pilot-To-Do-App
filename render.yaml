@@ -1,0 +1,29 @@
+services:
+  # Web Service
+  - type: web
+    name: todo-backend
+    runtime: python
+    env: python
+    plan: free
+    region: oregon
+    branch: phase-2
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://frontend-ordvthoae-ambreen-rais-projects.vercel.app
+      - key: DATABASE_URL
+        fromDatabase:
+          name: todo-db
+          property: connectionString
+
+  # PostgreSQL Database
+  - type: pserv
+    name: todo-db
+    plan: free
+    region: oregon
+    databaseName: todo_db
+    user: todo_user
