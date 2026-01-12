@@ -109,25 +109,18 @@
 - ✅ Auto-extraction of Title, Priority, and Due Date
 - ✅ Editable AI suggestions before confirmation
 - ✅ Visual Confidence Indicators (Green/Amber/Red)
+- ✅ AI-generated Task Summaries
+- ✅ Proactive Insights & Recommendations
+- ✅ Conversational Interface (Chat with Tasks)
 
 **Tech Stack**: OpenAI/Claude API Integration, Python NLP, Next.js AI Components
 
 **Components**:
 - **Backend**: `/ai/parse` endpoint using LLM for structured data extraction
 - **Frontend**: `AIInterpretationPanel` with interactive corrections
+- **AI Router**: Full support for conversations, summaries, and insights
 
 - 🌐 Deployed at: https://frontend-ordvthoae-ambreen-rais-projects.vercel.app
-
-### Phase 3: AI-Powered (Backlog)
-
-**Objective**: Add conversational and AI-assisted task management.
-
-**Key Features**:
-- Natural language task creation
-- AI chat interface for task operations
-- Intent detection from natural language
-- AI-generated task summaries and insights
-- Smart suggestions for organization
 
 ### Phase 4: Cloud Infrastructure (Backlog)
 

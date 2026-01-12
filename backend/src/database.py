@@ -29,6 +29,18 @@ init_engine()
 
 
 def init_db() -> None:
+    # Use explicit imports to ensure all models are registered with SQLModel
+    from .models.user import User
+    from .models.task import Task
+    from .models.activity import AIActivityLog
+    from .models.preferences import UserPreferences
+    from .models.ai_conversation import AIConversation
+    from .models.ai_message import AIMessage
+    from .models.parsed_task_intent import ParsedTaskIntent
+    from .models.ai_insight import AIInsight
+    from .models.task_summary import TaskSummary
+    from .models.user_context import UserContext
+
     SQLModel.metadata.create_all(engine)
 
 
