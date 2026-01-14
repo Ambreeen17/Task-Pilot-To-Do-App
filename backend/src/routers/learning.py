@@ -22,10 +22,14 @@ from ..models.user import User
 from ..models.preferences import UserPreferences
 from ..models.behavioral_event import BehavioralEvent, UserBehaviorProfile
 from ..learning.signal_policy import SignalPolicy
+from ..learning.event_capture import EventCaptureService, EventCaptureError
 from ..learning.schemas import (
     LearningControlRequest,
     LearningStatusResponse,
-    PrivacySummaryResponse
+    PrivacySummaryResponse,
+    BehavioralEventCreate,
+    BehavioralEventResponse,
+    PriorityChangeEvent
 )
 
 router = APIRouter(prefix="/learning", tags=["learning"])
@@ -411,4 +415,173 @@ async def update_learning_categories(
     return {
         "message": "Learning categories updated",
         "categories": categories
+    }
+
+
+@router.post("/events/capture", response_model=BehavioralEventResponse)
+async def capture_behavioral_event(
+    event: BehavioralEventCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Capture a behavioral event from client.
+
+    **Privacy-Safe Event Capture**:
+    - Only metadata captured (hour, day, task_type_hash)
+    - NO task content, titles, descriptions
+    - Validates against signal policy before storage
+
+    **Event Types**:
+    - task_completed: User completed a task
+    - priority_changed: User changed task priority
+    - task_grouped: User worked on related tasks in session
+
+    **Auto-Skipped** if learning disabled or paused.
+    """
+    # Check if learning is enabled
+    if not EventCaptureService.should_capture_event(str(current_user.id), session):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Learning is not enabled or is paused. Enable learning first."
+        )
+
+    try:
+        # Create event from schema
+        db_event = BehavioralEvent(
+            user_id=current_user.id,
+            event_type=event.event_type.value,
+            hour_of_day=event.hour_of_day,
+            day_of_week=event.day_of_week,
+            task_type_hash=event.task_type_hash,
+            session_id=event.session_id,
+            timestamp=datetime.utcnow()
+        )
+
+        # Validate privacy compliance
+        is_compliant, violations = EventCaptureService.validate_privacy_compliance(db_event)
+        if not is_compliant:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Privacy validation failed: {violations}"
+            )
+
+        # Store event
+        session.add(db_event)
+        session.commit()
+        session.refresh(db_event)
+
+        # Update data points counter in profile
+        profile = session.exec(
+            select(UserBehaviorProfile).where(UserBehaviorProfile.user_id == current_user.id)
+        ).first()
+
+        if profile:
+            profile.data_points_collected += 1
+            session.commit()
+
+        return db_event
+
+    except EventCaptureError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/events/priority-change")
+async def capture_priority_change_event(
+    event: PriorityChangeEvent,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Capture priority change behavioral event.
+
+    Records when user changes task priority (e.g., low → high).
+    Used to learn priority adjustment patterns.
+
+    **Privacy**: Only priority levels captured, NO task content.
+    """
+    # Check if learning is enabled
+    if not EventCaptureService.should_capture_event(str(current_user.id), session):
+        return {
+            "message": "Learning disabled or paused. Event not captured.",
+            "captured": False
+        }
+
+    try:
+        # Generate task type hash from a generic identifier
+        # In real implementation, client should provide generic type
+        task_type_hash = EventCaptureService.hash_task_type("generic")
+
+        db_event = BehavioralEvent(
+            user_id=current_user.id,
+            event_type="priority_changed",
+            hour_of_day=event.hour_of_day,
+            day_of_week=event.day_of_week,
+            task_type_hash=task_type_hash,
+            session_id=event.session_id,
+            from_priority=event.from_priority,
+            to_priority=event.to_priority,
+            timestamp=datetime.utcnow()
+        )
+
+        # Validate privacy compliance
+        is_compliant, violations = EventCaptureService.validate_privacy_compliance(db_event)
+        if not is_compliant:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Privacy validation failed: {violations}"
+            )
+
+        session.add(db_event)
+        session.commit()
+
+        # Update data points counter
+        profile = session.exec(
+            select(UserBehaviorProfile).where(UserBehaviorProfile.user_id == current_user.id)
+        ).first()
+
+        if profile:
+            profile.data_points_collected += 1
+            session.commit()
+
+        return {
+            "message": "Priority change event captured",
+            "captured": True,
+            "event_type": "priority_changed",
+            "from_priority": event.from_priority,
+            "to_priority": event.to_priority
+        }
+
+    except EventCaptureError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.get("/events/count")
+async def get_event_count(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get total number of behavioral events captured for user.
+
+    Useful for showing data collection progress:
+    - "Building your profile (12/20 events needed)"
+    - "156 events collected since enabling learning"
+    """
+    count = EventCaptureService.get_user_event_count(str(current_user.id), session)
+
+    patterns_ready = count >= 20  # Minimum for pattern detection
+    progress_percentage = min(100, int((count / 20) * 100))
+
+    return {
+        "total_events": count,
+        "patterns_ready": patterns_ready,
+        "progress_percentage": progress_percentage,
+        "message": f"{'Patterns ready!' if patterns_ready else f'{20 - count} more events needed for patterns'}"
     }
