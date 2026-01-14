@@ -23,6 +23,7 @@ from ..models.preferences import UserPreferences
 from ..models.behavioral_event import BehavioralEvent, UserBehaviorProfile
 from ..learning.signal_policy import SignalPolicy
 from ..learning.event_capture import EventCaptureService, EventCaptureError
+from ..learning.batch_learning import BatchLearningJob
 from ..learning.schemas import (
     LearningControlRequest,
     LearningStatusResponse,
@@ -584,4 +585,160 @@ async def get_event_count(
         "patterns_ready": patterns_ready,
         "progress_percentage": progress_percentage,
         "message": f"{'Patterns ready!' if patterns_ready else f'{20 - count} more events needed for patterns'}"
+    }
+
+
+@router.post("/patterns/refresh")
+async def refresh_patterns(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Manually trigger pattern learning for current user.
+
+    Runs pattern detection immediately instead of waiting for nightly batch job.
+
+    **Use Cases**:
+    - User wants to see patterns immediately
+    - Testing learning system
+    - After bulk import of historical data
+
+    **Performance**: Usually completes in <5 seconds per user.
+    """
+    # Check if learning is enabled
+    prefs = session.exec(
+        select(UserPreferences).where(UserPreferences.user_id == current_user.id)
+    ).first()
+
+    if not prefs or not prefs.learning_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Learning is not enabled. Enable learning first."
+        )
+
+    try:
+        # Run batch learning for this user
+        results = BatchLearningJob.trigger_manual_learning(str(current_user.id), session)
+
+        return {
+            "message": "Patterns refreshed successfully",
+            "patterns_updated": results["patterns_updated"],
+            "patterns_forgotten": results["patterns_forgotten"],
+            "execution_time_seconds": results["execution_time"]
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Pattern refresh failed: {str(e)}"
+        )
+
+
+@router.get("/patterns/view")
+async def view_patterns(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    View all learned patterns for current user.
+
+    Returns:
+    - Peak hours pattern (which hours user is most productive)
+    - Type timing pattern (which hours for specific task types)
+    - Priority adjustment pattern (common priority changes)
+    - Grouping pattern (which tasks are grouped together)
+
+    **Transparency**: Shows exactly what the system has learned.
+    """
+    # Get behavior profile
+    profile = session.exec(
+        select(UserBehaviorProfile).where(UserBehaviorProfile.user_id == current_user.id)
+    ).first()
+
+    if not profile:
+        return {
+            "message": "No patterns yet. Enable learning and complete at least 20 tasks.",
+            "patterns": {}
+        }
+
+    # Parse JSON patterns
+    patterns = {
+        "peak_hours": json.loads(profile.peak_hours) if profile.peak_hours != "{}" else {},
+        "type_timing": json.loads(profile.type_timing_patterns) if profile.type_timing_patterns != "{}" else {},
+        "priority_adjustment": json.loads(profile.priority_adjustment_patterns) if profile.priority_adjustment_patterns != "{}" else {},
+        "grouping": json.loads(profile.grouping_patterns) if profile.grouping_patterns != "{}" else {},
+        "metadata": {
+            "data_points_collected": profile.data_points_collected,
+            "last_learning_date": profile.last_learning_date,
+            "model_version": profile.model_version,
+            "learning_enabled": profile.learning_enabled
+        }
+    }
+
+    # Count non-empty patterns
+    pattern_count = sum(1 for p in [patterns["peak_hours"], patterns["type_timing"],
+                                     patterns["priority_adjustment"], patterns["grouping"]] if p)
+
+    return {
+        "message": f"{pattern_count} patterns detected",
+        "patterns": patterns,
+        "patterns_ready": profile.data_points_collected >= 20
+    }
+
+
+@router.get("/patterns/summary")
+async def get_pattern_summary(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get high-level pattern summary for dashboard.
+
+    Returns simplified pattern insights:
+    - Top 3 productive hours
+    - Most common priority changes
+    - Number of task grouping patterns
+    - Overall learning progress
+
+    **Use Case**: Dashboard widgets, quick insights
+    """
+    profile = session.exec(
+        select(UserBehaviorProfile).where(UserBehaviorProfile.user_id == current_user.id)
+    ).first()
+
+    if not profile or profile.data_points_collected < 20:
+        return {
+            "message": "Not enough data for patterns",
+            "progress": f"{profile.data_points_collected if profile else 0}/20 events",
+            "summary": {}
+        }
+
+    # Parse peak hours
+    peak_hours = json.loads(profile.peak_hours) if profile.peak_hours != "{}" else {}
+    top_3_hours = []
+    if peak_hours:
+        sorted_hours = sorted(peak_hours.items(), key=lambda x: x[1], reverse=True)[:3]
+        top_3_hours = [int(hour) for hour, _ in sorted_hours]
+
+    # Parse priority patterns
+    priority_patterns = json.loads(profile.priority_adjustment_patterns) if profile.priority_adjustment_patterns != "{}" else {}
+    common_changes = []
+    if priority_patterns:
+        for from_pri, to_pris in priority_patterns.items():
+            for to_pri, count in to_pris.items():
+                common_changes.append(f"{from_pri}→{to_pri} ({count}x)")
+
+    # Parse grouping patterns
+    grouping_patterns = json.loads(profile.grouping_patterns) if profile.grouping_patterns != "{}" else {}
+    grouping_count = len(grouping_patterns)
+
+    return {
+        "message": "Pattern summary",
+        "summary": {
+            "top_productive_hours": top_3_hours,
+            "common_priority_changes": common_changes[:3],
+            "task_grouping_patterns": grouping_count,
+            "data_points": profile.data_points_collected,
+            "last_updated": profile.last_learning_date
+        }
     }
