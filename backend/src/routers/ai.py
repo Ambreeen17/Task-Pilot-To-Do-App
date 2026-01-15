@@ -35,7 +35,7 @@ def ai_health_check():
     import os
 
     api_key_set = bool(os.getenv("ANTHROPIC_API_KEY"))
-    features_enabled = os.getenv("AI_FEATURES_ENABLED", "true").lower() == "true"
+    features_enabled = os.getenv("AI_FEATURES_ENABLED", "false").lower() == "true"
 
     return {
         "status": "ok" if (api_key_set and features_enabled) else "degraded",

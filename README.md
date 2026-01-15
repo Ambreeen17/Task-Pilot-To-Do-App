@@ -41,9 +41,9 @@
 |-------|-----------|--------------|--------|--------|--------|
 | **1** | Foundation Todo System | CLI interface, in-memory storage, CRUD operations | Backend, QA | CRUD, Validation, UI Composition | ✅ Completed |
 | **2** | Full-Stack Web App | Next.js UI, FastAPI backend, PostgreSQL persistence, Authentication | Frontend, Backend, Database, QA | UI Composition, State Management, API Integration, Database Modeling, Auth | ✅ Complete |
-| **3** | AI-Powered Layer | Natural language tasks, AI chat interface, smart insights | Frontend, Backend, QA | NLP Integration, Animation, Accessibility | ✅ Complete |
-| **4** | Cloud Infrastructure | Docker containers, Kubernetes orchestration, Helm charts | DevOps, Backend | Containerization, Orchestration, Observability | 📋 Backlog |
-| **5** | Production Deployment | Managed K8s, auto-scaling, CI/CD pipelines, event-driven patterns | DevOps, Backend | Deployment, Scalability, Monitoring | 📋 Backlog |
+| **3** | AI-Assisted Todo | Natural language parsing, AI conversations, smart insights, rate limiting | AI, Frontend, Backend, QA | NLP Integration, Animation, Accessibility | ✅ Complete |
+| **4** | Autonomous & Proactive Todo | Deadline monitoring, proactive reminders, smart rescheduling, pattern detection | Autonomy, AI, Backend | Autonomous Actions, Consent Management | 📋 Spec-Only (Future) |
+| **5** | Self-Learning & Adaptive Intelligence | Behavioral learning, adaptive suggestions, pattern detection, explainable recommendations | Learning, AI, Backend | Privacy-First Learning, GDPR Compliance | ✅ Complete |
 
 ### Phase 1: Foundation (Completed)
 
@@ -122,26 +122,42 @@
 
 - 🌐 Deployed at: https://frontend-ordvthoae-ambreen-rais-projects.vercel.app
 
-### Phase 4: Cloud Infrastructure (Backlog)
+### Phase 4: Autonomous & Proactive Todo (Spec-Only / Future Phase)
 
-**Objective**: Containerize and prepare for cloud deployment.
+**Objective**: Add autonomous task monitoring and proactive assistance.
+
+**Status**: 📋 Specification Complete, Implementation Pending
+
+**Key Features** (Specified in `specs/004-autonomous-todo/`):
+- Proactive deadline reminders and risk detection
+- Autonomy level controls (Low/Medium/High consent tiers)
+- Smart rescheduling suggestions for overdue tasks
+- Habit and pattern detection (recurring tasks)
+- Full audit trail and explainability for all autonomous actions
+- Safety-first: No silent execution, preview-before-action enforced
+
+**Why Spec-Only**: Phase 4 requires significant autonomous agent infrastructure. The project prioritized Phase 5 (Self-Learning) first to establish privacy-safe behavioral learning foundations. Phase 4 will build upon Phase 5's pattern detection capabilities.
+
+**Implementation Path**: When implemented, Phase 4 will leverage Phase 5's `UserBehaviorProfile` and `BehavioralEvent` models to provide context-aware autonomous assistance.
+
+###Phase 5: Self-Learning & Adaptive Intelligence (✅ Complete)
+
+**Objective**: Privacy-first behavioral learning with explainable adaptive suggestions.
+
+**Status**: ✅ Fully Implemented and Tested
 
 **Key Features**:
-- Docker multi-stage builds
-- Kubernetes manifests (Minikube)
-- Helm charts for deployment
-- Local observability stack (logs, metrics, traces)
+- 🔐 Privacy-preserving learning (metadata only, no task content)
+- ✅ Opt-in consent (OFF by default, GDPR/CCPA compliant)
+- 🧠 4 adaptive suggestion types (peak hours, task timing, priority patterns, grouping)
+- 📊 Pattern detection with confidence scoring (0.60-1.00)
+- 🔄 Complete user control (enable/disable/pause/reset)
+- 📝 Full explainability (reasoning for every suggestion)
+- 🧪 71 tests passing (100% pass rate)
 
-### Phase 5: Production Deployment (Backlog)
+**API**: 20 endpoints across consent management, event capture, pattern viewing, and adaptive suggestions
 
-**Objective**: Achieve production readiness with managed cloud infrastructure.
-
-**Key Features**:
-- DigitalOcean Kubernetes (DOKS) deployment
-- Horizontal pod autoscaling
-- CI/CD pipeline integration
-- Event-driven patterns (message queues)
-- Production monitoring and alerting
+**Documentation**: See `specs/005-adaptive-intelligence/` and `PHASE5_IMPLEMENTATION_SUMMARY.md`
 
 ---
 
