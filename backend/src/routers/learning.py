@@ -12,7 +12,7 @@ Reference: ADR-003 User Control and Transparency Framework
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 import json
 import uuid
 
@@ -24,6 +24,7 @@ from ..models.behavioral_event import BehavioralEvent, UserBehaviorProfile
 from ..learning.signal_policy import SignalPolicy
 from ..learning.event_capture import EventCaptureService, EventCaptureError
 from ..learning.batch_learning import BatchLearningJob
+from ..learning.adaptive_logic import AdaptiveLogicService, Suggestion
 from ..learning.schemas import (
     LearningControlRequest,
     LearningStatusResponse,
@@ -740,5 +741,245 @@ async def get_pattern_summary(
             "task_grouping_patterns": grouping_count,
             "data_points": profile.data_points_collected,
             "last_updated": profile.last_learning_date
+        }
+    }
+
+
+@router.get("/suggestions")
+async def get_adaptive_suggestions(
+    suggestion_type: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get adaptive suggestions based on learned patterns.
+
+    Returns personalized suggestions ranked by confidence (0.60+).
+
+    **Suggestion Types**:
+    - peak_hour: Best times to work based on completion patterns
+    - type_timing: When to schedule specific task types
+    - priority_adjustment: Priority setting recommendations
+    - task_grouping: Which tasks to batch together
+
+    **Confidence Levels**:
+    - 0.75+: High confidence (show prominently)
+    - 0.60-0.74: Medium confidence (suggest)
+    - <0.60: Not shown (pattern not strong enough)
+
+    **Use Cases**:
+    - Smart scheduling assistant
+    - Task organization recommendations
+    - Productivity insights
+    """
+    # Validate suggestion type if provided
+    valid_types = {"peak_hour", "type_timing", "priority_adjustment", "task_grouping"}
+    if suggestion_type and suggestion_type not in valid_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid suggestion type. Valid types: {valid_types}"
+        )
+
+    # Generate suggestions
+    suggestions = AdaptiveLogicService.generate_all_suggestions(
+        str(current_user.id),
+        session,
+        filter_type=suggestion_type
+    )
+
+    if not suggestions:
+        return {
+            "message": "No suggestions available yet. Complete more tasks to build patterns.",
+            "suggestions": [],
+            "count": 0
+        }
+
+    # Rank by confidence
+    ranked = AdaptiveLogicService.rank_suggestions_by_confidence(suggestions)
+
+    return {
+        "message": f"{len(suggestions)} suggestions generated",
+        "suggestions": [s.to_dict() for s in suggestions],
+        "ranked": {
+            "high_confidence": [s.to_dict() for s in ranked["high_confidence"]],
+            "medium_confidence": [s.to_dict() for s in ranked["medium_confidence"]]
+        },
+        "count": len(suggestions)
+    }
+
+
+@router.get("/suggestions/time-slots")
+async def get_time_slot_recommendations(
+    target_hour: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get time slot recommendations for scheduling tasks.
+
+    Returns suitability scores for time slots based on peak productivity patterns.
+
+    **Query Parameters**:
+    - target_hour: Specific hour to analyze (0-23). If omitted, returns all hours.
+
+    **Suitability Levels**:
+    - High (0.75+): Excellent time for focused work
+    - Medium (0.50-0.74): Good time, but not optimal
+    - Low (<0.50): Less productive time, avoid if possible
+
+    **Use Case**: Smart scheduling - suggest optimal times for new tasks
+    """
+    # Validate target hour
+    if target_hour is not None and not (0 <= target_hour <= 23):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="target_hour must be between 0 and 23"
+        )
+
+    recommendations = AdaptiveLogicService.generate_time_slot_recommendations(
+        str(current_user.id),
+        session,
+        target_hour=target_hour
+    )
+
+    if not recommendations:
+        return {
+            "message": "No time slot data available yet. Complete more tasks to build patterns.",
+            "recommendations": []
+        }
+
+    return {
+        "message": f"Time slot recommendations ({len(recommendations)} slots)",
+        "recommendations": recommendations,
+        "target_hour": target_hour
+    }
+
+
+@router.post("/feedback/suggestion")
+async def provide_suggestion_feedback(
+    suggestion_type: str,
+    feedback: str,
+    metadata: Optional[Dict] = None,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Provide feedback on adaptive suggestions (accept/reject/dismiss).
+
+    **Feedback Learning Loop**: System learns from your responses to improve suggestions.
+
+    **Feedback Types**:
+    - "accept": Suggestion was helpful and acted upon
+    - "reject": Suggestion was not helpful or inaccurate
+    - "dismiss": Saw suggestion but didn't act (neutral)
+
+    **Privacy**: Only feedback type and suggestion category stored, NO task content.
+
+    Future Implementation:
+    - Adjust confidence scores based on feedback
+    - Learn which suggestion types user prefers
+    - Improve pattern detection algorithms
+    """
+    # Validate feedback type
+    valid_feedback = {"accept", "reject", "dismiss"}
+    if feedback not in valid_feedback:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid feedback. Valid types: {valid_feedback}"
+        )
+
+    # Validate suggestion type
+    valid_types = {"peak_hour", "type_timing", "priority_adjustment", "task_grouping"}
+    if suggestion_type not in valid_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid suggestion type. Valid types: {valid_types}"
+        )
+
+    # Store feedback event (privacy-safe)
+    feedback_event = BehavioralEvent(
+        user_id=current_user.id,
+        event_type=f"feedback_{feedback}",
+        hour_of_day=datetime.utcnow().hour,
+        day_of_week=datetime.utcnow().weekday(),
+        task_type_hash=EventCaptureService.hash_task_type(suggestion_type),
+        session_id=f"feedback_{datetime.utcnow().timestamp()}",
+        timestamp=datetime.utcnow()
+    )
+
+    session.add(feedback_event)
+    session.commit()
+
+    # Future: Update pattern confidence based on feedback
+    # For now, just record the feedback
+    return {
+        "message": f"Feedback '{feedback}' recorded for {suggestion_type} suggestion",
+        "feedback": feedback,
+        "suggestion_type": suggestion_type,
+        "learning": "System will use this feedback to improve future suggestions"
+    }
+
+
+@router.get("/suggestions/stats")
+async def get_suggestion_statistics(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """
+    Get statistics about adaptive suggestions.
+
+    Returns:
+    - Total suggestions generated
+    - Breakdown by confidence level
+    - Breakdown by suggestion type
+    - Feedback statistics (accept/reject/dismiss rates)
+
+    **Use Case**: Dashboard widget showing learning system effectiveness
+    """
+    # Get all suggestions
+    suggestions = AdaptiveLogicService.generate_all_suggestions(
+        str(current_user.id),
+        session
+    )
+
+    # Count by type
+    type_counts = {}
+    for suggestion in suggestions:
+        type_counts[suggestion.suggestion_type] = type_counts.get(suggestion.suggestion_type, 0) + 1
+
+    # Count by confidence level
+    ranked = AdaptiveLogicService.rank_suggestions_by_confidence(suggestions)
+    confidence_counts = {
+        "high": len(ranked["high_confidence"]),
+        "medium": len(ranked["medium_confidence"]),
+        "low": len(ranked["low_confidence"])
+    }
+
+    # Count feedback events
+    feedback_events = session.exec(
+        select(BehavioralEvent).where(
+            BehavioralEvent.user_id == current_user.id,
+            BehavioralEvent.event_type.like("feedback_%")
+        )
+    ).all()
+
+    feedback_counts = {
+        "accept": sum(1 for e in feedback_events if e.event_type == "feedback_accept"),
+        "reject": sum(1 for e in feedback_events if e.event_type == "feedback_reject"),
+        "dismiss": sum(1 for e in feedback_events if e.event_type == "feedback_dismiss")
+    }
+
+    total_feedback = sum(feedback_counts.values())
+    acceptance_rate = (feedback_counts["accept"] / total_feedback * 100) if total_feedback > 0 else 0
+
+    return {
+        "message": "Suggestion statistics",
+        "total_suggestions": len(suggestions),
+        "by_type": type_counts,
+        "by_confidence": confidence_counts,
+        "feedback": {
+            "counts": feedback_counts,
+            "total": total_feedback,
+            "acceptance_rate": round(acceptance_rate, 1)
         }
     }
