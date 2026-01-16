@@ -18,11 +18,11 @@
 
 **Purpose**: Database schema, API endpoints, and logging foundation.
 
-- [ ] T001 [Observability Agent] Create `user_preferences` model in `backend/src/models/preferences.py` and migration
-- [ ] T002 [Observability Agent] Create `ai_activity_log` model in `backend/src/models/activity.py` and migration
-- [ ] T003 [Consent Agent] Implement `GET /monitor/settings` and `PUT /monitor/settings` in `backend/src/routers/monitor.py`
-- [ ] T004 [Observability Agent] Implement `GET /monitor/logs` in `backend/src/routers/monitor.py`
-- [ ] T005 [Safety Agent] Implement `LogService` in `backend/src/services/logger.py` to write structured audit logs
+- [x] T001 [Observability Agent] Create `user_preferences` model in `backend/src/models/preferences.py` and migration
+- [x] T002 [Observability Agent] Create `ai_activity_log` model in `backend/src/models/activity.py` and migration
+- [x] T003 [Consent Agent] Implement `GET /monitor/settings` and `PUT /monitor/settings` in `backend/src/routers/monitor.py`
+- [x] T004 [Observability Agent] Implement `GET /monitor/logs` in `backend/src/routers/monitor.py`
+- [x] T005 [Safety Agent] Implement `LogService` in `backend/src/services/logger.py` to write structured audit logs
 
 **Checkpoint**: Database tables created, settings API active, logging service ready.
 
@@ -32,11 +32,11 @@
 
 **Purpose**: Backend logic to detect patterns and generate suggestions.
 
-- [ ] T006 [Trigger Agent] Implement `DeadlineDetector` in `backend/src/services/triggers/deadline.py`
-- [ ] T007 [Trigger Agent] Implement `PatternDetector` (heuristic + basic learning) in `backend/src/services/triggers/pattern.py`
-- [ ] T008 [Reasoning Agent] Implement `SuggestionEngine` in `backend/src/services/suggestion.py` (combines triggers)
-- [ ] T009 [Reasoning Agent] Create `POST /ai/analyze` endpoint in `backend/src/routers/ai.py` that invokes SuggestionEngine
-- [ ] T010 [Safety Agent] Implement `ActionValidator` in `backend/src/services/safety.py` to check `user_preferences` before suggesting
+- [x] T006 [Trigger Agent] Implement `DeadlineDetector` in `backend/src/services/triggers/deadline.py`
+- [x] T007 [Trigger Agent] Implement `PatternDetector` (heuristic + basic learning) in `backend/src/services/triggers/pattern.py`
+- [x] T008 [Reasoning Agent] Implement `SuggestionEngine` in `backend/src/services/suggestion.py` (combines triggers)
+- [x] T009 [Reasoning Agent] Create `POST /ai/analyze` endpoint in `backend/src/routers/ai.py` that invokes SuggestionEngine
+- [x] T010 [Safety Agent] Implement `ActionValidator` in `backend/src/services/safety.py` to check `user_preferences` before suggesting
 
 **Checkpoint**: Backend can ingest current state and output a list of valid `Suggestion` objects.
 
@@ -46,10 +46,10 @@
 
 **Purpose**: Frontend "brain" that drives the autonomy loop.
 
-- [ ] T011 [Orchestrator Agent] Create `AutonomyContext` in `frontend/src/context/AutonomyContext.tsx`
-- [ ] T012 [Orchestrator Agent] Implement `useAutonomy` hook with periodic polling logic (useEffect)
-- [ ] T013 [Consent Agent] Create `AutonomySettings` UI component in `frontend/src/components/settings/AutonomySettings.tsx`
-- [ ] T014 [Orchestrator Agent] Connect `useAutonomy` to `POST /ai/analyze` and local state management
+- [x] T011 [Orchestrator Agent] Create `AutonomyContext` in `frontend/src/context/AutonomyContext.tsx`
+- [x] T012 [Orchestrator Agent] Implement `useAutonomy` hook with periodic polling logic (useEffect)
+- [x] T013 [Consent Agent] Create `AutonomySettings` UI component in `frontend/src/components/settings/AutonomySettings.tsx`
+- [x] T014 [Orchestrator Agent] Connect `useAutonomy` to `POST /ai/analyze` and local state management
 
 **Checkpoint**: Frontend regularly polls backend when active; Settings UI allows toggling autonomy levels.
 
@@ -59,10 +59,10 @@
 
 **Purpose**: Visible surface for AI actions.
 
-- [ ] T015 [UI Agent] Create `SuggestionPanel` component in `frontend/src/components/ai/SuggestionPanel.tsx`
-- [ ] T016 [UI Agent] Create `NotificationManager` integration in `frontend/src/components/ui/Toast.tsx` for proactive alerts
-- [ ] T017 [UI Agent] Implement `Accept/Reject` handlers in `frontend/src/services/aiActions.ts`
-- [ ] T018 [Observability Agent] Create `ActivityLogView` component in `frontend/src/components/settings/ActivityLogView.tsx`
+- [x] T015 [UI Agent] Create `SuggestionPanel` component in `frontend/src/components/ai/SuggestionPanel.tsx`
+- [x] T016 [UI Agent] Create `NotificationManager` integration in `frontend/src/components/ui/Toast.tsx` for proactive alerts
+- [x] T017 [UI Agent] Implement `Accept/Reject` handlers in `frontend/src/services/aiActions.ts`
+- [x] T018 [Observability Agent] Create `ActivityLogView` component in `frontend/src/components/settings/ActivityLogView.tsx`
 
 **Checkpoint**: Users see suggestions, can accept/reject them, and view history.
 
