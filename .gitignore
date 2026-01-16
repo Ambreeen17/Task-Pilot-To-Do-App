@@ -88,3 +88,4 @@ frontend/out/
 frontend/node_modules/
 .vercel
 .env*.local
+.git-rewrite/\nnul
