@@ -6,24 +6,22 @@ services:
     env: python
     plan: free
     region: oregon
-    branch: phase-2
+    branch: 005-adaptive-intelligence
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn src.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://frontend-ordvthoae-ambreen-rais-projects.vercel.app
+        value: https://frontend-jet-ten-42.vercel.app
       - key: DATABASE_URL
         fromDatabase:
           name: todo-db
           property: connectionString
 
-  # PostgreSQL Database
-  - type: pserv
-    name: todo-db
+databases:
+  - name: todo-db
     plan: free
     region: oregon
-    maxconnections: 20
     databaseName: todo_db
     user: todo_user
