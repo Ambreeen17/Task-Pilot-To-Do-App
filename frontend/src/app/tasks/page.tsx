@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/Toast";
 import { AIInterpretationPanel } from "@/components/ai/AIInterpretationPanel";
 import { clearToken, getToken } from "@/lib/auth";
+import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
 import { createTask, deleteTask, listTasks, toggleTask, type Task, type TaskPriority } from "@/lib/api";
 import { parseNaturalLanguage } from "@/services/aiApi";
 import { ParseResponse } from "@/types/ai";
@@ -225,7 +227,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950 px-6 py-12 text-white">
+    <div className="min-h-screen bg-gradient-to-br slate-900 px-6 py-12 text-white">
       {toast ? <Toast kind={toast.kind} message={toast.message} /> : null}
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -235,10 +237,10 @@ export default function TasksPage() {
           className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              TODO APP
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-400 via-cyan-400 to-violet-400 bg-clip-text text-transparent">
+              TaskPilot
             </h1>
-            <p className="mt-1 text-sm text-white/60">Organize your life, one task at a time</p>
+            <p className="mt-1 text-sm text-white/60">Your Smart Copilot for Tasks</p>
           </div>
           <div className="flex items-center gap-2">
             <Button

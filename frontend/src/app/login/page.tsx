@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/Toast";
+import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
 import { login } from "@/lib/api";
 import { setToken } from "@/lib/auth";
 
@@ -43,7 +45,7 @@ export default function LoginPage() {
     try {
       const res = await login(email, password);
       setToken(res.access_token);
-      setToast({ kind: "success", message: "Signed in" });
+      setToast({ kind: "success", message: "Welcome back!" });
       router.push("/tasks");
     } catch (err) {
       const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Sign in failed";
@@ -54,26 +56,34 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900 px-6 py-16 text-white">
+    <div className="min-h-screen bg-slate-900 px-6 py-16 text-white relative overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-violet-600/20 blur-3xl" />
+        <div className="absolute top-1/3 -left-40 h-96 w-96 rounded-full bg-cyan-600/20 blur-3xl" />
+      </div>
+
       {toast ? <Toast kind={toast.kind} message={toast.message} /> : null}
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mx-auto flex max-w-md flex-col items-center gap-8"
-      >
+      <div className="relative mx-auto flex max-w-md flex-col items-center gap-8">
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-center"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            TODO APP
-          </h1>
-          <p className="mt-2 text-sm text-white/60">Organize your life, one task at a time</p>
+          <Link href="/">
+            <TaskPilotLogo size="lg" animate={true} />
+          </Link>
         </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-white/60 text-center"
+        >
+          Welcome back! Sign in to continue.
+        </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -111,25 +121,23 @@ export default function LoginPage() {
                 type="submit"
                 loading={submitting}
                 disabled={!canSubmit}
-                className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 shadow-lg shadow-purple-500/25"
+                className="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 shadow-lg shadow-violet-500/25"
               >
                 Sign In
               </Button>
 
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="text-sm text-white/70 hover:text-white transition-colors"
-                onClick={() => router.push("/signup")}
+              <motion.div
+                className="text-sm text-white/70 text-center"
               >
                 New here?{" "}
-                <span className="font-semibold text-cyan-400 hover:text-cyan-300">Create account</span>
-              </motion.button>
+                <Link href="/signup" className="font-semibold text-cyan-400 hover:text-cyan-300 transition-colors">
+                  Create account
+                </Link>
+              </motion.div>
             </form>
           </Card>
         </motion.div>
-      </motion.div>
+      </div>
     </div>
   );
 }
