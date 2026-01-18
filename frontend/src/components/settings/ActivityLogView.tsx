@@ -1,14 +1,23 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
+interface ActivityLog {
+  action_type: string;
+  reasoning: string;
+  status: string;
+}
+
 const ActivityLogView: React.FC = () => {
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
   const { token } = useAuth();
 
   useEffect(() => {
+    if (!token) return;
     fetch('/api/monitor/logs', {
       headers: { 'Authorization': `Bearer ${token}` }
-    }).then(res => res.json()).then(data => setLogs(data.logs));
+    }).then(res => res.json()).then(data => setLogs(data.logs || []));
   }, [token]);
 
   return (

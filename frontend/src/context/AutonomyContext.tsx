@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext'; // Assume auth context exists
 
@@ -22,10 +24,10 @@ export const AutonomyProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [autonomyLevel, setAutonomyLevel] = useState<'low' | 'medium' | 'high'>('low');
   const [isPolling, setIsPolling] = useState(false);
-  const { user, token } = useAuth();
+  const { token } = useAuth();
 
   const refreshSuggestions = async () => {
-    if (!token || !user) return;
+    if (!token) return;
     setIsPolling(true);
     try {
       const response = await fetch('/api/monitor/ai/analyze', {
@@ -42,7 +44,7 @@ export const AutonomyProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const updateAutonomyLevel = async (level: 'low' | 'medium' | 'high') => {
-    if (!token || !user) return;
+    if (!token) return;
     try {
       const response = await fetch('/api/monitor/settings', {
         method: 'PUT',
