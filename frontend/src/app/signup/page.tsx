@@ -18,10 +18,16 @@ function isValidEmail(email: string): boolean {
 
 export default function SignupPage() {
   const router = useRouter();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ kind: "error" | "success"; message: string } | null>(null);
+
+  const fullNameError = useMemo(() => {
+    if (!fullName) return null;
+    return fullName.trim().length >= 1 ? null : "Please enter your full name";
+  }, [fullName]);
 
   const emailError = useMemo(() => {
     if (!email) return null;
@@ -33,7 +39,7 @@ export default function SignupPage() {
     return password.length >= 8 ? null : "Password must be at least 8 characters";
   }, [password]);
 
-  const canSubmit = !emailError && !passwordError && email.length > 0 && password.length > 0;
+  const canSubmit = !fullNameError && !emailError && !passwordError && fullName.length > 0 && email.length > 0 && password.length > 0;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,7 +48,7 @@ export default function SignupPage() {
     setSubmitting(true);
     setToast(null);
     try {
-      await register(email, password);
+      await register(email, fullName, password);
       setToast({ kind: "success", message: "Account created! Please sign in." });
       router.push("/login");
     } catch (err) {
@@ -94,6 +100,16 @@ export default function SignupPage() {
             className="border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl max-w-md"
           >
             <form className="flex flex-col gap-5" onSubmit={onSubmit}>
+              <Input
+                label="Full Name"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                error={fullNameError}
+                placeholder="John Doe"
+                autoComplete="name"
+                className="bg-white/5 border-white/10"
+              />
               <Input
                 label="Email"
                 type="email"

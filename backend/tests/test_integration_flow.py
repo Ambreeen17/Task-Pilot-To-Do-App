@@ -9,7 +9,7 @@ def test_full_flow_register_login_crud_toggle_search(client):
     email = f"flow-{uuid.uuid4()}@example.com"
 
     # register
-    resp = client.post("/auth/register", json={"email": email, "password": "password123"})
+    resp = client.post("/auth/register", json={"email": email, "full_name": "Flow User", "password": "password123"})
     assert resp.status_code == 201
 
     # login

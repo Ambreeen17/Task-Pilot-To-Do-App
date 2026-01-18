@@ -9,7 +9,8 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/Toast";
 import { AIInterpretationPanel } from "@/components/ai/AIInterpretationPanel";
-import { clearToken, getToken } from "@/lib/auth";
+import { getToken } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
 import { createTask, deleteTask, listTasks, toggleTask, type Task, type TaskPriority } from "@/lib/api";
 import { parseNaturalLanguage } from "@/services/aiApi";
@@ -60,6 +61,7 @@ function priorityBadge(priority: TaskPriority) {
 }
 
 export default function TasksPage() {
+  const { userName, logout: authLogout } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: "error" | "success"; message: string } | null>(null);
 
@@ -204,7 +206,7 @@ export default function TasksPage() {
   }
 
   function logout() {
-    clearToken();
+    authLogout();
     setToken(null);
     window.location.href = "/login";
   }
@@ -242,7 +244,12 @@ export default function TasksPage() {
             </h1>
             <p className="mt-1 text-sm text-white/60">Your Smart Copilot for Tasks</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            {userName && (
+              <span className="text-sm text-white/70">
+                Welcome, <span className="font-semibold text-cyan-400">{userName}</span>
+              </span>
+            )}
             <Button
               variant="ghost"
               onClick={logout}

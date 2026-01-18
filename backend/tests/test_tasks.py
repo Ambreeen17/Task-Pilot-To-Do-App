@@ -6,7 +6,7 @@ def _auth_header(token: str) -> dict:
 
 
 def _register_and_login(client, email: str = "user@example.com") -> str:
-    client.post("/auth/register", json={"email": email, "password": "password123"})
+    client.post("/auth/register", json={"email": email, "full_name": "Test User", "password": "password123"})
     resp = client.post("/auth/login", json={"email": email, "password": "password123"})
     assert resp.status_code == 200
     return resp.json()["access_token"]

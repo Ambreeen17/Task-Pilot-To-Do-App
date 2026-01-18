@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/Toast";
 import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
 import { login } from "@/lib/api";
-import { setToken } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -19,6 +19,7 @@ function isValidEmail(email: string): boolean {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -44,8 +45,8 @@ export default function LoginPage() {
     setToast(null);
     try {
       const res = await login(email, password);
-      setToken(res.access_token);
-      setToast({ kind: "success", message: "Welcome back!" });
+      setAuth(res.access_token, res.user_name);
+      setToast({ kind: "success", message: `Welcome back, ${res.user_name}!` });
       router.push("/tasks");
     } catch (err) {
       const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Sign in failed";
