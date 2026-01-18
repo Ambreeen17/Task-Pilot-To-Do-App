@@ -30,37 +30,14 @@ const features = [
   }
 ];
 
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.15
-    }
-  }
-};
-
-const cardVariants = {
-  hidden: { y: 40, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      duration: 0.5,
-      ease: 'easeOut'
-    }
-  }
-};
-
 export function FeaturesSection() {
   return (
     <section className="relative bg-slate-900 py-24">
-      {/* Background accent */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-violet-600/5 blur-3xl" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-6">
-        {/* Section header */}
         <motion.div
           initial={{ y: 30, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
@@ -79,41 +56,28 @@ export function FeaturesSection() {
           </p>
         </motion.div>
 
-        {/* Feature cards */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"
-        >
-          {features.map((feature) => (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {features.map((feature, index) => (
             <motion.div
               key={feature.title}
-              variants={cardVariants}
-              whileHover={{ y: -8, transition: { duration: 0.2 } }}
+              initial={{ y: 40, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              whileHover={{ y: -8 }}
               className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/10"
             >
-              {/* Gradient glow on hover */}
               <div className={`absolute -inset-px rounded-2xl bg-gradient-to-r ${feature.gradient} opacity-0 blur-xl transition-opacity group-hover:opacity-20`} />
-
               <div className="relative">
-                {/* Icon */}
                 <div className={`mb-4 inline-flex rounded-xl bg-gradient-to-r ${feature.gradient} p-3`}>
                   <feature.icon className="h-6 w-6 text-white" />
                 </div>
-
-                {/* Content */}
-                <h3 className="mb-2 text-lg font-semibold text-white">
-                  {feature.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-white/60">
-                  {feature.description}
-                </p>
+                <h3 className="mb-2 text-lg font-semibold text-white">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-white/60">{feature.description}</p>
               </div>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );
