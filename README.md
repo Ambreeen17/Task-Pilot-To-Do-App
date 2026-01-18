@@ -516,7 +516,7 @@ TO-DO-APP/
 
 ### Documentation
 
-- Spec-Kit Plus (Spec-Driven Development methodology)
+- [Spec-Kit Plus Documentation](https://github.com/panaversity/spec-kit-plus)
 - [Claude Code Guide](https://docs.claude.com/)
 - [Python Testing](https://docs.python.org/3/library/unittest.html)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
@@ -531,5 +531,5 @@ This project is part of the Spec-Driven AI-Native Development methodology demons
 ---
 
 <p align="center">
-  Built with Spec-Kit Plus and <a href="https://claude.com/">Claude Code</a>
+  Built with <a href="https://github.com/panaversity/spec-kit-plus">Spec-Kit Plus</a> and <a href="https://claude.com/">Claude Code</a>
 </p>
