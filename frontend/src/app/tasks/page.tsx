@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/Toast";
+import { AIInterpretationPanel } from "@/components/ai/AIInterpretationPanel";
 import { clearToken, getToken } from "@/lib/auth";
 import { createTask, deleteTask, listTasks, toggleTask, type Task, type TaskPriority } from "@/lib/api";
+import { parseNaturalLanguage } from "@/services/aiApi";
+import { ParseResponse } from "@/types/ai";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -26,7 +29,7 @@ const itemVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       stiffness: 300,
       damping: 24,
     },
@@ -70,6 +73,11 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  // AI-Assisted Todo State
+  const [naturalInput, setNaturalInput] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseResult, setParseResult] = useState<ParseResponse | null>(null);
+
   useEffect(() => {
     const t = getToken();
     setToken(t);
@@ -107,6 +115,43 @@ export default function TasksPage() {
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, filteredQuery]);
+
+  // AI Parsing Handler
+  async function onParse(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!token) return;
+    if (!naturalInput.trim()) return;
+
+    setIsParsing(true);
+    setParseResult(null);
+
+    try {
+      const result = await parseNaturalLanguage(token, naturalInput);
+      setParseResult(result);
+
+      // Clear manual fields if any
+      setNewTitle("");
+      setNewDesc("");
+    } catch (err) {
+      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "AI Parsing failed";
+      setToast({ kind: "error", message: msg });
+    } finally {
+      setIsParsing(false);
+    }
+  }
+
+  // Handle successful AI task creation
+  function onAIConfirm(task: Task) {
+    setTasks((prev) => [task, ...prev]);
+    setParseResult(null);
+    setNaturalInput("");
+    setToast({ kind: "success", message: "Task created successfully with AI!" });
+  }
+
+  // Handle AI rejection
+  function onAICancel() {
+    setParseResult(null);
+  }
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -180,7 +225,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 px-6 py-12 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950 px-6 py-12 text-white">
       {toast ? <Toast kind={toast.kind} message={toast.message} /> : null}
 
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -211,7 +256,7 @@ export default function TasksPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl">
+          <Card className="border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl max-w-none">
             <div className="flex flex-col gap-6 p-6">
               <motion.div
                 className="flex flex-col gap-3 sm:flex-row sm:items-end"
@@ -231,7 +276,7 @@ export default function TasksPage() {
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-white/80 font-medium">Status</span>
                   <select
-                    className="rounded-xl border border-white/10 bg-black px-4 py-2.5 text-white font-sans transition-all hover:border-cyan-500/50 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                    className="rounded-xl border border-white/10 bg-black/40 bg-gradient-to-r from-cyan-500/5 to-purple-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-cyan-500/50 hover:bg-black/50 hover:shadow-lg hover:shadow-cyan-500/10 focus:border-cyan-500 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 backdrop-blur-sm"
                     value={status}
                     onChange={(e) => setStatus(e.target.value as "" | "completed" | "incomplete")}
                   >
@@ -243,7 +288,7 @@ export default function TasksPage() {
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-white/80 font-medium">Priority</span>
                   <select
-                    className="rounded-xl border border-white/10 bg-black px-4 py-2.5 text-white font-sans transition-all hover:border-purple-500/50 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    className="rounded-xl border border-white/10 bg-black/40 bg-gradient-to-r from-purple-500/5 to-pink-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-purple-500/50 hover:bg-black/50 hover:shadow-lg hover:shadow-purple-500/10 focus:border-purple-500 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-purple-500/20 backdrop-blur-sm"
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as "" | TaskPriority)}
                   >
@@ -255,14 +300,68 @@ export default function TasksPage() {
                 </label>
               </motion.div>
 
+
+              {/* AI-Assisted Task Creation Section */}
+              <AnimatePresence>
+                {parseResult ? (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <AIInterpretationPanel
+                      parseResponse={parseResult}
+                      token={token}
+                      onConfirm={onAIConfirm}
+                      onCancel={onAICancel}
+                      className="mb-6 border-cyan-500/30"
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.form
+                    onSubmit={onParse}
+                    className="flex flex-col gap-3 border-b border-white/10 pb-6 mb-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                     <div className="flex items-center gap-2 mb-1">
+                      <div className="text-sm font-semibold text-white/90 uppercase tracking-wider bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                        ✨ AI Task Creator
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Input
+                          label=""
+                          value={naturalInput}
+                          onChange={(e) => setNaturalInput(e.target.value)}
+                          placeholder="e.g., 'Review quarterly report with Sarah tomorrow at 2pm high priority'"
+                          className="bg-white/5 border-white/10 focus:border-purple-500/50"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        loading={isParsing}
+                        disabled={!naturalInput.trim()}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white min-w-[100px]"
+                      >
+                         Magic
+                      </Button>
+                    </div>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+
               <motion.form
                 onSubmit={onCreate}
-                className="flex flex-col gap-3 border-t border-white/10 pt-6"
+                className="flex flex-col gap-3 pt-2"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <div className="text-sm font-semibold text-white/90 uppercase tracking-wider">Create New Task</div>
+                <div className="text-sm font-semibold text-white/90 uppercase tracking-wider">Manual Entry</div>
                 <Input
                   label="Title"
                   value={newTitle}
@@ -280,7 +379,7 @@ export default function TasksPage() {
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-white/80 font-medium">Priority</span>
                   <select
-                    className="rounded-xl border border-white/10 bg-black px-4 py-2.5 text-white font-sans transition-all hover:border-pink-500/50 focus:border-pink-500 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
+                    className="rounded-xl border border-white/10 bg-black/40 bg-gradient-to-r from-pink-500/5 to-purple-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-pink-500/50 hover:bg-black/50 hover:shadow-lg hover:shadow-pink-500/10 focus:border-pink-500 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-pink-500/20 backdrop-blur-sm"
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
                   >

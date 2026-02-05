@@ -1,7 +1,11 @@
 import uuid
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+
+if TYPE_CHECKING:
+    from .ai_conversation import AIConversation
 
 
 def utcnow() -> datetime:
@@ -16,3 +20,6 @@ class User(SQLModel, table=True):
     password_hash: str = Field(nullable=False, max_length=255)
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
+
+    # Phase 3 AI relationships
+    ai_conversations: list["AIConversation"] = Relationship(back_populates="user")
