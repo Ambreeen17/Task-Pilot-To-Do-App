@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/Toast";
 import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
 import { register, login } from "@/lib/api";
+import { setToken, setUsername } from "@/lib/auth";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -50,10 +51,10 @@ export default function SignupPage() {
     try {
       await register(email, fullName, password);
       setToast({ kind: "success", message: "Account created successfully!" });
-      // Store token and redirect to tasks
+      // Auto-login after signup and redirect to tasks
       const loginResponse = await login(email, password);
-      const { setToken } = await import("@/lib/auth");
       setToken(loginResponse.access_token);
+      setUsername(loginResponse.user_name);
       router.push("/tasks");
     } catch (err) {
       const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Sign up failed";

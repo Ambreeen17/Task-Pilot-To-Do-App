@@ -18,8 +18,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     // Load token and userName from localStorage on mount
-    const storedToken = localStorage.getItem('token');
-    const storedUserName = localStorage.getItem('userName');
+    const storedToken = localStorage.getItem('taskpilot_token');
+    const storedUserName = localStorage.getItem('taskpilot_username');
     if (storedToken) {
       setTokenState(storedToken);
     }
@@ -31,16 +31,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const setAuth = (newToken: string | null, newUserName?: string | null) => {
     setTokenState(newToken);
     if (newToken) {
-      localStorage.setItem('token', newToken);
+      localStorage.setItem('taskpilot_token', newToken);
     } else {
-      localStorage.removeItem('token');
+      localStorage.removeItem('taskpilot_token');
     }
     if (newUserName !== undefined) {
       setUserNameState(newUserName);
       if (newUserName) {
-        localStorage.setItem('userName', newUserName);
+        localStorage.setItem('taskpilot_username', newUserName);
       } else {
-        localStorage.removeItem('userName');
+        localStorage.removeItem('taskpilot_username');
       }
     }
   };
