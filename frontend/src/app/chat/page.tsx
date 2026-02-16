@@ -175,23 +175,15 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
+    // Load token and initialize conversation on mount
     const t = getToken();
     setToken(t);
-  }, []);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Start a new conversation on load (after token is loaded)
-  useEffect(() => {
-    const t = getToken();
     if (!t) return;
 
     async function initConversation() {
       try {
-        const conv = await startConversation(t, { language });
+        const conv = await startConversation(t, { language: "en" });
         setConversation(conv);
 
         // Load conversation with messages
@@ -206,7 +198,12 @@ export default function ChatPage() {
     }
 
     void initConversation();
-  }, []); // Run once on mount
+  }, []);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
