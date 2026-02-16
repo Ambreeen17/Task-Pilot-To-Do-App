@@ -12,6 +12,7 @@ import { Toast } from "@/components/Toast";
 import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
 import { register, login } from "@/lib/api";
 import { setToken, setUsername } from "@/lib/auth";
+import { getErrorMessage } from "@/lib/errors";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -57,8 +58,7 @@ export default function SignupPage() {
       setUsername(loginResponse.user_name);
       router.push("/tasks");
     } catch (err) {
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Sign up failed";
-      setToast({ kind: "error", message: msg });
+      setToast({ kind: "error", message: getErrorMessage(err) });
     } finally {
       setSubmitting(false);
     }

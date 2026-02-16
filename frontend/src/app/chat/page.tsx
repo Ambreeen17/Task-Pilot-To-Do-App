@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Toast } from "@/components/Toast";
 import { getToken } from "@/lib/auth";
+import { getErrorMessage } from "@/lib/errors";
 import { useAuth } from "@/context/AuthContext";
 import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
 import {
@@ -192,8 +193,7 @@ export default function ChatPage() {
           setMessages(fullConv.messages);
         }
       } catch (err) {
-        const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Failed to start conversation";
-        setToast({ kind: "error", message: msg });
+        setToast({ kind: "error", message: getErrorMessage(err) });
       }
     }
 
@@ -255,8 +255,7 @@ export default function ChatPage() {
         setToast({ kind: "success", message: successMsg });
       }
     } catch (err) {
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Failed to send message";
-      setToast({ kind: "error", message: msg });
+      setToast({ kind: "error", message: getErrorMessage(err) });
       // Remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
     } finally {
@@ -274,8 +273,7 @@ export default function ChatPage() {
       setMessages([]);
       setToast({ kind: "success", message: t.chatStarted });
     } catch (err) {
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : language === "ur" ? "بات چیت شروع کرنے میں ناکام" : "Failed to start conversation";
-      setToast({ kind: "error", message: msg });
+      setToast({ kind: "error", message: getErrorMessage(err) });
     } finally {
       setIsLoading(false);
     }
@@ -291,8 +289,7 @@ export default function ChatPage() {
       setMessages([]);
       setToast({ kind: "success", message: t.chatClosed });
     } catch (err) {
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : language === "ur" ? "بات چیت بند کرنے میں ناکام" : "Failed to close conversation";
-      setToast({ kind: "error", message: msg });
+      setToast({ kind: "error", message: getErrorMessage(err) });
     } finally {
       setIsLoading(false);
     }

@@ -11,6 +11,7 @@ import { Toast } from "@/components/Toast";
 import { AIInterpretationPanel } from "@/components/ai/AIInterpretationPanel";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { getToken } from "@/lib/auth";
+import { getErrorMessage } from "@/lib/errors";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
@@ -101,7 +102,7 @@ export default function TasksPage() {
       });
       setTasks(res.tasks);
     } catch (err) {
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Failed to load";
+      setToast({ kind: "error", message: getErrorMessage(err) });
       setToast({ kind: "error", message: msg });
     } finally {
       setLoading(false);
@@ -140,7 +141,7 @@ export default function TasksPage() {
       setNewTitle("");
       setNewDesc("");
     } catch (err) {
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "AI Parsing failed";
+      setToast({ kind: "error", message: getErrorMessage(err) });
       setToast({ kind: "error", message: msg });
     } finally {
       setIsParsing(false);
@@ -176,7 +177,7 @@ export default function TasksPage() {
       setNewDesc("");
       setTasks((prev) => [created, ...prev]);
     } catch (err) {
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Create failed";
+      setToast({ kind: "error", message: getErrorMessage(err) });
       setToast({ kind: "error", message: msg });
     } finally {
       setCreating(false);
@@ -190,7 +191,7 @@ export default function TasksPage() {
       await toggleTask(token, id);
     } catch (err) {
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Toggle failed";
+      setToast({ kind: "error", message: getErrorMessage(err) });
       setToast({ kind: "error", message: msg });
     }
   }
@@ -203,7 +204,7 @@ export default function TasksPage() {
       await deleteTask(token, id);
     } catch (err) {
       setTasks(before);
-      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Delete failed";
+      setToast({ kind: "error", message: getErrorMessage(err) });
       setToast({ kind: "error", message: msg });
     }
   }
