@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: taskpilot-backend
+    runtime: python
+    env: python
+    plan: free
+    region: oregon
+    branch: 005-adaptive-intelligence
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://frontend-jet-ten-42.vercel.app
+      - key: AI_FEATURES_ENABLED
+        value: "true"
+      - key: ANTHROPIC_MODEL
+        value: claude-3-5-sonnet-20241022
+      - key: DATABASE_URL
+        fromDatabase:
+          name: taskpilot-db
+          property: connectionString
+
+databases:
+  - name: taskpilot-db
+    plan: free
+    region: oregon
+    databaseName: taskpilot_db
+    user: taskpilot_user

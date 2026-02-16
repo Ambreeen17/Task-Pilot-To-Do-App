@@ -1,0 +1,574 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Toast } from "@/components/Toast";
+import { AIInterpretationPanel } from "@/components/ai/AIInterpretationPanel";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { getToken } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
+import { createTask, deleteTask, listTasks, toggleTask, type Task, type TaskPriority } from "@/lib/api";
+import { parseNaturalLanguage } from "@/services/aiApi";
+import { ParseResponse } from "@/types/ai";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+  exit: {
+    x: -100,
+    opacity: 0,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
+
+function priorityBadge(priority: TaskPriority) {
+  const colors = {
+    High: "bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-400 border border-red-500/30",
+    Medium: "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 border border-amber-500/30",
+    Low: "bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-400 border border-emerald-500/30",
+  };
+
+  return (
+    <span className={`rounded-full px-3 py-1 text-xs font-semibold tracking-wide shadow-lg ${colors[priority]}`}>
+      {priority}
+    </span>
+  );
+}
+
+export default function TasksPage() {
+  const { userName, logout: authLogout } = useAuth();
+  const { isDark } = useTheme();
+  const [token, setToken] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ kind: "error" | "success"; message: string } | null>(null);
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"" | "completed" | "incomplete">("");
+  const [priority, setPriority] = useState<"" | TaskPriority>("");
+
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newPriority, setNewPriority] = useState<TaskPriority>("Medium");
+
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  // AI-Assisted Todo State
+  const [naturalInput, setNaturalInput] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseResult, setParseResult] = useState<ParseResponse | null>(null);
+
+  useEffect(() => {
+    const t = getToken();
+    setToken(t);
+  }, []);
+
+  async function refresh(currentToken: string) {
+    setLoading(true);
+    setToast(null);
+    try {
+      const res = await listTasks(currentToken, {
+        search: search || undefined,
+        status: status || undefined,
+        priority: priority || "",
+      });
+      setTasks(res.tasks);
+    } catch (err) {
+      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Failed to load";
+      setToast({ kind: "error", message: msg });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!token) return;
+    void refresh(token);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  const filteredQuery = useMemo(() => ({ search, status, priority }), [search, status, priority]);
+
+  useEffect(() => {
+    if (!token) return;
+    const id = window.setTimeout(() => void refresh(token), 300);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, filteredQuery]);
+
+  // AI Parsing Handler
+  async function onParse(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!token) return;
+    if (!naturalInput.trim()) return;
+
+    setIsParsing(true);
+    setParseResult(null);
+
+    try {
+      const result = await parseNaturalLanguage(token, naturalInput);
+      setParseResult(result);
+
+      // Clear manual fields if any
+      setNewTitle("");
+      setNewDesc("");
+    } catch (err) {
+      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "AI Parsing failed";
+      setToast({ kind: "error", message: msg });
+    } finally {
+      setIsParsing(false);
+    }
+  }
+
+  // Handle successful AI task creation
+  function onAIConfirm(task: Task) {
+    setTasks((prev) => [task, ...prev]);
+    setParseResult(null);
+    setNaturalInput("");
+    setToast({ kind: "success", message: "Task created successfully with AI!" });
+  }
+
+  // Handle AI rejection
+  function onAICancel() {
+    setParseResult(null);
+  }
+
+  async function onCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token) return;
+    if (!newTitle.trim()) return;
+
+    setCreating(true);
+    try {
+      const created = await createTask(token, {
+        title: newTitle.trim(),
+        description: newDesc.trim() ? newDesc.trim() : undefined,
+        priority: newPriority,
+      });
+      setNewTitle("");
+      setNewDesc("");
+      setTasks((prev) => [created, ...prev]);
+    } catch (err) {
+      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Create failed";
+      setToast({ kind: "error", message: msg });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function onToggle(id: string) {
+    if (!token) return;
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+    try {
+      await toggleTask(token, id);
+    } catch (err) {
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)));
+      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Toggle failed";
+      setToast({ kind: "error", message: msg });
+    }
+  }
+
+  async function onDelete(id: string) {
+    if (!token) return;
+    const before = tasks;
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    try {
+      await deleteTask(token, id);
+    } catch (err) {
+      setTasks(before);
+      const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Delete failed";
+      setToast({ kind: "error", message: msg });
+    }
+  }
+
+  function logout() {
+    authLogout();
+    setToken(null);
+    window.location.href = "/login";
+  }
+
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 px-6 py-16 text-white">
+        <div className="mx-auto max-w-md">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <Card title="Not signed in">
+              <div className="flex flex-col gap-3">
+                <p className="text-white/70">Please sign in to view your tasks.</p>
+                <Button onClick={() => (window.location.href = "/login")}>Go to login</Button>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen px-6 py-12 text-white relative overflow-hidden animated-gradient-slow">
+      {/* Animated background orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-purple-500/30 blur-3xl"
+        />
+        <motion.div
+          animate={{
+            scale: [1.2, 1, 1.2],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
+          className="absolute top-1/3 -left-40 h-96 w-96 rounded-full bg-cyan-500/30 blur-3xl"
+        />
+        <motion.div
+          animate={{
+            scale: [1, 1.3, 1],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2,
+          }}
+          className="absolute bottom-0 right-1/4 h-64 w-64 rounded-full bg-pink-500/20 blur-3xl"
+        />
+      </div>
+
+      {toast ? <Toast kind={toast.kind} message={toast.message} /> : null}
+
+      <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-6">
+        {/* Glass Header */}
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card rounded-3xl p-6 sm:p-8"
+        >
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="text-5xl"
+              >
+                ✨
+              </motion.div>
+              <div>
+                <h1 className="text-5xl font-bold text-gradient">
+                  TaskPilot
+                </h1>
+                <p className="mt-2 text-sm text-white/60">Your AI-Powered Smart Copilot for Tasks</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <ThemeToggle />
+              <Link href="/chat">
+                <Button
+                  variant="ghost"
+                  className="hover-scale hover-glow rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-500/50"
+                >
+                  💬 AI Chat
+                </Button>
+              </Link>
+              {userName && (
+                <span className="text-sm text-white/70 glass px-4 py-2 rounded-xl">
+                  Welcome, <span className="font-semibold text-gradient">{userName}</span>
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                onClick={logout}
+                className="hover-scale rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/50"
+              >
+                Logout
+              </Button>
+            </div>
+          </div>
+        </motion.header>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="glass-card rounded-3xl shadow-2xl max-w-none border-0">
+            <div className="flex flex-col gap-6 p-6">
+              <motion.div
+                className="flex flex-col gap-3 sm:flex-row sm:items-end"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="flex-1">
+                  <Input
+                    label="Search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search tasks..."
+                    className="bg-white/5 border-white/10"
+                  />
+                </div>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-white/80 font-medium">Status</span>
+                  <select
+                    className="rounded-xl border border-white/10 bg-white/5 bg-gradient-to-r from-cyan-500/5 to-purple-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-cyan-500/50 hover:bg-white/10 hover:shadow-lg hover:shadow-cyan-500/10 focus:border-cyan-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 backdrop-blur-sm"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as "" | "completed" | "incomplete")}
+                  >
+                    <option value="">All</option>
+                    <option value="incomplete">Active</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-white/80 font-medium">Priority</span>
+                  <select
+                    className="rounded-xl border border-white/10 bg-white/5 bg-gradient-to-r from-purple-500/5 to-pink-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-purple-500/50 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/10 focus:border-purple-500 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/20 backdrop-blur-sm"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as "" | TaskPriority)}
+                  >
+                    <option value="">All</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </label>
+              </motion.div>
+
+
+              {/* AI-Assisted Task Creation Section */}
+              <AnimatePresence>
+                {parseResult ? (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <AIInterpretationPanel
+                      parseResponse={parseResult}
+                      token={token}
+                      onConfirm={onAIConfirm}
+                      onCancel={onAICancel}
+                      className="mb-6 border-cyan-500/30"
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.form
+                    onSubmit={onParse}
+                    className="flex flex-col gap-3 border-b border-white/10 pb-6 mb-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                     <div className="flex items-center gap-2 mb-1">
+                      <div className="text-sm font-semibold text-white/90 uppercase tracking-wider bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                        ✨ AI Task Creator
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Input
+                          label=""
+                          value={naturalInput}
+                          onChange={(e) => setNaturalInput(e.target.value)}
+                          placeholder="e.g., 'Review quarterly report with Sarah tomorrow at 2pm high priority'"
+                          className="bg-white/5 border-white/10 focus:border-purple-500/50"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        loading={isParsing}
+                        disabled={!naturalInput.trim()}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white min-w-[100px]"
+                      >
+                         Magic
+                      </Button>
+                    </div>
+                  </motion.form>
+                )}
+              </AnimatePresence>
+
+              <motion.form
+                onSubmit={onCreate}
+                className="flex flex-col gap-3 pt-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="text-sm font-semibold text-white/90 uppercase tracking-wider">Manual Entry</div>
+                <Input
+                  label="Title"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="What do you need to do?"
+                  className="bg-white/5 border-white/10"
+                />
+                <Input
+                  label="Description"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  placeholder="Optional description..."
+                  className="bg-white/5 border-white/10"
+                />
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-white/80 font-medium">Priority</span>
+                  <select
+                    className="rounded-xl border border-white/10 bg-black/40 bg-gradient-to-r from-pink-500/5 to-purple-500/5 px-4 py-2.5 text-white font-sans transition-all hover:border-pink-500/50 hover:bg-black/50 hover:shadow-lg hover:shadow-pink-500/10 focus:border-pink-500 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-pink-500/20 backdrop-blur-sm"
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </label>
+                <Button
+                  type="submit"
+                  loading={creating}
+                  disabled={!newTitle.trim()}
+                  className="mt-2 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 shadow-lg shadow-purple-500/25"
+                >
+                  Create Task
+                </Button>
+              </motion.form>
+
+              <div className="border-t border-white/10 pt-6">
+                <div className="mb-6 flex items-center justify-between">
+                  <div className="text-lg font-bold text-gradient">Your Tasks</div>
+                  <div className="glass px-4 py-2 rounded-xl text-sm text-white/70">
+                    {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+                  </div>
+                </div>
+                {loading ? (
+                  <div className="flex items-center justify-center py-12 text-white/60">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="h-12 w-12 rounded-full border-4 border-purple-500 border-t-transparent"
+                    />
+                  </div>
+                ) : null}
+                {!loading && tasks.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-12 text-white/60"
+                  >
+                    <svg className="mb-4 h-16 w-16 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <p>No tasks yet. Create your first task above!</p>
+                  </motion.div>
+                ) : null}
+                <AnimatePresence mode="popLayout">
+                  {tasks.map((t, index) => (
+                    <motion.li
+                      key={t.id}
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      transition={{ delay: index * 0.08, type: "spring", stiffness: 300, damping: 24 }}
+                      className="group glass-card rounded-2xl p-5 transition-all hover:scale-[1.02] hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/20"
+                      style={{ "--stagger-delay": index } as React.CSSProperties}
+                    >
+                      <div className="flex items-center gap-4">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => void onToggle(t.id)}
+                          className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all ${
+                            t.completed
+                              ? "border-cyan-500 bg-cyan-500"
+                              : "border-white/30 hover:border-cyan-400"
+                          }`}
+                        >
+                          {t.completed && (
+                            <motion.svg
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="h-4 w-4 text-black"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </motion.svg>
+                          )}
+                        </motion.button>
+                        <div className="flex flex-col">
+                          <div
+                            className={`text-base font-medium transition-all ${
+                              t.completed ? "text-white/40 line-through" : "text-white"
+                            }`}
+                          >
+                            {t.title}
+                          </div>
+                          {t.description ? (
+                            <div className="mt-1 text-xs text-white/60">{t.description}</div>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {priorityBadge(t.priority)}
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => void onDelete(t.id)}
+                          className="rounded-xl border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/20"
+                        >
+                          Delete
+                        </motion.button>
+                      </div>
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
+  );
+}

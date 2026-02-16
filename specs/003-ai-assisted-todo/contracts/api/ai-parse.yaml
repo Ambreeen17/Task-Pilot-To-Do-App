@@ -1,0 +1,579 @@
+openapi: 3.0.3
+info:
+  title: AI Task Parsing API
+  description: Natural language task parsing endpoints for Phase 3 AI-Assisted Todo
+  version: 1.0.0
+  contact:
+    name: Todo API Support
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+  - url: https://todo-backend.onrender.com/api/v1
+    description: Production
+
+paths:
+  /ai/parse:
+    post:
+      summary: Parse natural language into structured task
+      description: |
+        Accepts natural language input and extracts structured task attributes
+        (title, priority, due date/time) with confidence scores.
+
+        Rate limit: 100 requests/user/day
+      operationId: parseNaturalLanguage
+      tags:
+        - AI Parsing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParseRequest'
+            examples:
+              simple:
+                summary: Simple task
+                value:
+                  text: "Buy groceries"
+                  context: null
+              complex:
+                summary: Complex task with date and priority
+                value:
+                  text: "High priority: Submit report by Friday 5pm"
+                  context:
+                    timezone: "America/Los_Angeles"
+              relative:
+                summary: Relative date
+                value:
+                  text: "Remind me to call mom tomorrow"
+                  context:
+                    timezone: "UTC"
+      responses:
+        '200':
+          description: Parsing successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseResponse'
+              examples:
+                high_confidence:
+                  summary: High confidence parsing
+                  value:
+                    intent:
+                      original_text: "Buy groceries tomorrow"
+                      extracted_title: "Buy groceries"
+                      extracted_priority: null
+                      extracted_due_date: "2026-01-11"
+                      extracted_due_time: null
+                      confidence_scores:
+                        title: 0.95
+                        priority: 0.0
+                        due_date: 0.98
+                    recommendation: "auto_confirm"
+                    message: "Task ready to create"
+                low_confidence:
+                  summary: Low confidence parsing
+                  value:
+                    intent:
+                      original_text: "the thing by sometime next week maybe"
+                      extracted_title: "the thing"
+                      extracted_priority: null
+                      extracted_due_date: "2026-01-17"
+                      extracted_due_time: null
+                      confidence_scores:
+                        title: 0.65
+                        priority: 0.0
+                        due_date: 0.55
+                    recommendation: "review_required"
+                    message: "Please review the extracted details"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '503':
+          $ref: '#/components/responses/AIServiceUnavailable'
+
+  /ai/parse/confirm:
+    post:
+      summary: Confirm parsed intent and create task
+      description: |
+        Confirms user-edited parsed intent and creates a task in Phase 2 system.
+        Links the created task to the parsed intent record.
+      operationId: confirmParsedIntent
+      tags:
+        - AI Parsing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmIntentRequest'
+            examples:
+              as_parsed:
+                summary: Confirm as-is
+                value:
+                  intent_id: 42
+                  edited_title: "Buy groceries"
+                  edited_priority: null
+                  edited_due_date: "2026-01-11"
+                  edited_due_time: null
+              user_edited:
+                summary: User edited priority
+                value:
+                  intent_id: 42
+                  edited_title: "Buy groceries"
+                  edited_priority: "High"
+                  edited_due_date: "2026-01-11"
+                  edited_due_time: "18:00"
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmIntentResponse'
+              example:
+                task:
+                  id: 123
+                  title: "Buy groceries"
+                  priority: "High"
+                  due_date: "2026-01-11"
+                  due_time: "18:00:00"
+                  status: "pending"
+                  created_at: "2026-01-10T14:30:00Z"
+                intent_id: 42
+                message: "Task created successfully"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Intent not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "not_found"
+                message: "Parsed intent with ID 42 not found"
+
+  /ai/parse/reject:
+    post:
+      summary: Reject parsed intent (don't create task)
+      description: |
+        User rejects the AI interpretation and does not create a task.
+        Logs the rejection for model improvement.
+      operationId: rejectParsedIntent
+      tags:
+        - AI Parsing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - intent_id
+              properties:
+                intent_id:
+                  type: integer
+                  description: ID of parsed intent to reject
+                  example: 42
+                reason:
+                  type: string
+                  description: Optional feedback on why rejected
+                  maxLength: 500
+                  example: "AI misunderstood my request"
+      responses:
+        '200':
+          description: Intent rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Intent rejected"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Intent not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ai/rate-limit:
+    get:
+      summary: Check current rate limit status
+      description: Returns remaining AI requests for authenticated user
+      operationId: getRateLimitStatus
+      tags:
+        - AI Parsing
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Rate limit status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitStatus'
+              example:
+                requests_remaining: 87
+                requests_max: 100
+                reset_time: "2026-01-11T00:00:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    ParseRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: Natural language input from user
+          minLength: 1
+          maxLength: 10000
+          example: "Buy groceries tomorrow"
+        context:
+          type: object
+          description: Optional context for parsing
+          properties:
+            timezone:
+              type: string
+              description: User timezone (IANA format)
+              example: "America/Los_Angeles"
+            conversation_id:
+              type: integer
+              description: Conversation ID for multi-turn context
+              example: 15
+
+    ParseResponse:
+      type: object
+      required:
+        - intent
+        - recommendation
+        - message
+      properties:
+        intent:
+          $ref: '#/components/schemas/ParsedTaskIntent'
+        recommendation:
+          type: string
+          enum: [auto_confirm, review_required, clarification_needed]
+          description: |
+            - auto_confirm: High confidence (≥0.9), auto-accept
+            - review_required: Medium confidence (0.7-0.89), user should review
+            - clarification_needed: Low confidence (<0.7), ask user for details
+          example: "review_required"
+        message:
+          type: string
+          description: Human-readable guidance for user
+          example: "Please review the extracted details"
+
+    ParsedTaskIntent:
+      type: object
+      required:
+        - original_text
+        - confidence_scores
+      properties:
+        id:
+          type: integer
+          description: Intent ID (present after storage)
+          example: 42
+        original_text:
+          type: string
+          description: Raw user input
+          example: "Buy groceries tomorrow"
+        extracted_title:
+          type: string
+          nullable: true
+          description: Extracted task title
+          maxLength: 200
+          example: "Buy groceries"
+        extracted_priority:
+          type: string
+          nullable: true
+          enum: [Low, Medium, High]
+          description: Extracted priority level
+          example: null
+        extracted_due_date:
+          type: string
+          nullable: true
+          format: date
+          description: Extracted due date (ISO 8601)
+          example: "2026-01-11"
+        extracted_due_time:
+          type: string
+          nullable: true
+          format: time
+          description: Extracted due time (HH:MM 24-hour)
+          example: null
+        confidence_scores:
+          type: object
+          required:
+            - title
+            - priority
+            - due_date
+          properties:
+            title:
+              type: number
+              format: float
+              minimum: 0.0
+              maximum: 1.0
+              description: Confidence in title extraction
+              example: 0.95
+            priority:
+              type: number
+              format: float
+              minimum: 0.0
+              maximum: 1.0
+              description: Confidence in priority extraction
+              example: 0.0
+            due_date:
+              type: number
+              format: float
+              minimum: 0.0
+              maximum: 1.0
+              description: Confidence in due date extraction
+              example: 0.98
+
+    ConfirmIntentRequest:
+      type: object
+      required:
+        - intent_id
+        - edited_title
+      properties:
+        intent_id:
+          type: integer
+          description: ID of parsed intent to confirm
+          example: 42
+        edited_title:
+          type: string
+          description: User-confirmed title (may be edited)
+          minLength: 1
+          maxLength: 200
+          example: "Buy groceries"
+        edited_priority:
+          type: string
+          nullable: true
+          enum: [Low, Medium, High]
+          description: User-confirmed priority
+          example: "High"
+        edited_due_date:
+          type: string
+          nullable: true
+          format: date
+          description: User-confirmed due date
+          example: "2026-01-11"
+        edited_due_time:
+          type: string
+          nullable: true
+          format: time
+          description: User-confirmed due time
+          example: "18:00"
+
+    ConfirmIntentResponse:
+      type: object
+      required:
+        - task
+        - intent_id
+        - message
+      properties:
+        task:
+          $ref: '#/components/schemas/Task'
+        intent_id:
+          type: integer
+          description: Confirmed intent ID
+          example: 42
+        message:
+          type: string
+          example: "Task created successfully"
+
+    Task:
+      type: object
+      description: Phase 2 Task entity
+      required:
+        - id
+        - title
+        - status
+      properties:
+        id:
+          type: integer
+          example: 123
+        title:
+          type: string
+          example: "Buy groceries"
+        description:
+          type: string
+          nullable: true
+          example: null
+        priority:
+          type: string
+          nullable: true
+          enum: [Low, Medium, High]
+          example: "High"
+        status:
+          type: string
+          example: "pending"
+        due_date:
+          type: string
+          nullable: true
+          format: date
+          example: "2026-01-11"
+        due_time:
+          type: string
+          nullable: true
+          format: time
+          example: "18:00:00"
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-10T14:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-01-10T14:30:00Z"
+        completed_at:
+          type: string
+          nullable: true
+          format: date-time
+          example: null
+
+    RateLimitStatus:
+      type: object
+      required:
+        - requests_remaining
+        - requests_max
+        - reset_time
+      properties:
+        requests_remaining:
+          type: integer
+          description: Requests remaining in current window
+          example: 87
+        requests_max:
+          type: integer
+          description: Maximum requests per window
+          example: 100
+        reset_time:
+          type: string
+          format: date-time
+          description: When rate limit resets (ISO 8601)
+          example: "2026-01-11T00:00:00Z"
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          example: "validation_error"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Text field is required"
+        details:
+          type: object
+          description: Additional error context
+          additionalProperties: true
+          example:
+            field: "text"
+            constraint: "required"
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missing_field:
+              summary: Missing required field
+              value:
+                error: "validation_error"
+                message: "Text field is required"
+                details:
+                  field: "text"
+                  constraint: "required"
+            text_too_long:
+              summary: Text exceeds max length
+              value:
+                error: "validation_error"
+                message: "Text exceeds maximum length of 10000 characters"
+                details:
+                  field: "text"
+                  max_length: 10000
+                  actual_length: 12500
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "unauthorized"
+            message: "Valid authentication token required"
+
+    RateLimitExceeded:
+      description: User has exceeded daily AI request limit
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+              - type: object
+                properties:
+                  reset_time:
+                    type: string
+                    format: date-time
+                  fallback_url:
+                    type: string
+          example:
+            error: "rate_limit_exceeded"
+            message: "You've reached the daily limit of 100 AI requests. Try again tomorrow or use manual task entry."
+            reset_time: "2026-01-11T00:00:00Z"
+            fallback_url: "/tasks/create"
+
+    AIServiceUnavailable:
+      description: AI service (Claude API) is unavailable
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+              - type: object
+                properties:
+                  fallback_url:
+                    type: string
+          example:
+            error: "ai_service_unavailable"
+            message: "AI service is temporarily unavailable. Please use manual task entry."
+            fallback_url: "/tasks/create"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Phase 2 authentication (POST /auth/login)
+
+tags:
+  - name: AI Parsing
+    description: Natural language task parsing and interpretation

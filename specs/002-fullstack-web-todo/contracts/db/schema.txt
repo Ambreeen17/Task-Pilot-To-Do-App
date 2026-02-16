@@ -1,0 +1,19 @@
+Users (1) ---- (N) Tasks
+
+Users
+- id (UUID, PK)
+- email (varchar(255), UNIQUE, NOT NULL)
+- password_hash (varchar(255), NOT NULL)
+- created_at (timestamptz)
+- updated_at (timestamptz)
+
+Tasks
+- id (UUID, PK)
+- user_id (UUID, FK -> users.id, ON DELETE CASCADE)
+- title (varchar(500), NOT NULL)
+- description (text)
+- priority (varchar(20), CHECK in Low/Medium/High)
+- due_date (timestamptz)
+- completed (boolean)
+- created_at (timestamptz)
+- updated_at (timestamptz)

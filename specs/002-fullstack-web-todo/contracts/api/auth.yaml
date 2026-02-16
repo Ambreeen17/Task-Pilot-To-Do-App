@@ -1,0 +1,118 @@
+# Authentication API Contract
+
+**Version**: 1.0.0
+**Base Path**: /auth
+**Related Spec**: [spec.md](spec.md)
+
+## Endpoints
+
+### POST /auth/register
+
+Register a new user account.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "created_at": "2026-01-06T00:00:00Z"
+}
+```
+
+**Response (400 Bad Request):**
+```json
+{
+  "detail": "Email already registered"
+}
+```
+
+**Validation Rules:**
+- Email: Valid RFC 5322 format, max 255 chars
+- Password: Minimum 8 characters
+
+---
+
+### POST /auth/login
+
+Authenticate user and receive JWT token.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 86400
+}
+```
+
+**Response (401 Unauthorized):**
+```json
+{
+  "detail": "Invalid email or password"
+}
+```
+
+---
+
+### POST /auth/logout
+
+Logout user (client-side token removal).
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Response (200 OK):**
+```json
+{
+  "message": "Successfully logged out"
+}
+```
+
+---
+
+### GET /auth/me
+
+Get current authenticated user.
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Response (200 OK):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "created_at": "2026-01-06T00:00:00Z"
+}
+```
+
+**Response (401 Unauthorized):**
+```json
+{
+  "detail": "Not authenticated"
+}
+```
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid request body or validation error |
+| 401 | Missing or invalid authentication token |
+| 409 | Email already registered (register only) |

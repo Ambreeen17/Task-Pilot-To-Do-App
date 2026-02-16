@@ -1,0 +1,1 @@
+export { TaskPilotLogo } from './TaskPilotLogo';

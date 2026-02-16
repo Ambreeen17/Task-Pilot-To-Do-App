@@ -1,0 +1,203 @@
+# Tasks API Contract
+
+**Version**: 1.0.0
+**Base Path**: /tasks
+**Related Spec**: [spec.md](spec.md)
+
+## Endpoints
+
+### GET /tasks
+
+List all tasks for authenticated user.
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Query Parameters:**
+- search (optional): Search in title and description
+- status (optional): Filter by status (completed, incomplete)
+- priority (optional): Filter by priority (Low, Medium, High)
+- sort_by (optional): Field to sort by (created_at, priority, due_date)
+- sort_order (optional): asc or desc (default: desc)
+- page (optional): Page number (default: 1)
+- page_size (optional): Items per page (default: 20, max: 100)
+
+**Response (200 OK):**
+```json
+{
+  "tasks": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Complete project",
+      "description": "Finish Phase 2 implementation",
+      "priority": "High",
+      "due_date": "2026-01-15T00:00:00Z",
+      "completed": false,
+      "created_at": "2026-01-06T00:00:00Z",
+      "updated_at": "2026-01-06T00:00:00Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "page_size": 20
+}
+```
+
+---
+
+### POST /tasks
+
+Create a new task.
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Request:**
+```json
+{
+  "title": "New task title",
+  "description": "Optional description",
+  "priority": "Medium",
+  "due_date": "2026-01-20T00:00:00Z"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "New task title",
+  "description": "Optional description",
+  "priority": "Medium",
+  "due_date": "2026-01-20T00:00:00Z",
+  "completed": false,
+  "created_at": "2026-01-06T00:00:00Z",
+  "updated_at": "2026-01-06T00:00:00Z"
+}
+```
+
+**Validation:**
+- title: Required, 1-500 characters
+- priority: Optional, one of: Low, Medium, High (default: Medium)
+- due_date: Optional, must be valid ISO 8601 timestamp
+
+---
+
+### GET /tasks/{task_id}
+
+Get a specific task.
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Response (200 OK):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Task title",
+  "description": "Task description",
+  "priority": "High",
+  "due_date": "2026-01-15T00:00:00Z",
+  "completed": false,
+  "created_at": "2026-01-06T00:00:00Z",
+  "updated_at": "2026-01-06T00:00:00Z"
+}
+```
+
+**Response (403 Forbidden):**
+```json
+{
+  "detail": "Not authorized to access this task"
+}
+```
+
+**Response (404 Not Found):**
+```json
+{
+  "detail": "Task not found"
+}
+```
+
+---
+
+### PUT /tasks/{task_id}
+
+Update a task.
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Request:**
+```json
+{
+  "title": "Updated title",
+  "description": "Updated description",
+  "priority": "High",
+  "due_date": "2026-01-25T00:00:00Z",
+  "completed": true
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Updated title",
+  "description": "Updated description",
+  "priority": "High",
+  "due_date": "2026-01-25T00:00:00Z",
+  "completed": true,
+  "created_at": "2026-01-06T00:00:00Z",
+  "updated_at": "2026-01-06T12:00:00Z"
+}
+```
+
+---
+
+### PATCH /tasks/{task_id}/toggle
+
+Toggle task completion status.
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Response (200 OK):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "completed": true,
+  "updated_at": "2026-01-06T12:00:00Z"
+}
+```
+
+---
+
+### DELETE /tasks/{task_id}
+
+Delete a task.
+
+**Headers:**
+- Authorization: Bearer {token}
+
+**Response (204 No Content):** (empty body)
+
+**Response (403 Forbidden):**
+```json
+{
+  "detail": "Not authorized to delete this task"
+}
+```
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid request body or validation error |
+| 401 | Missing or invalid authentication token |
+| 403 | Not authorized to access/modify task |
+| 404 | Task not found |
+| 422 | Validation error |

@@ -1,0 +1,85 @@
+# Signup Page UI Contract
+
+**Version**: 1.0.0
+**Related Spec**: [spec.md](spec.md)
+
+## Layout
+
+### Desktop (1024px+)
+```
++----------------------------------+
+|        [Logo]                    |
+|                                  |
+|     Email    [____________]      |
+|     Password [____________]      |
+|     Confirm  [____________]      |
+|                                  |
+|     [ Create Account ]           |
+|                                  |
+|     Already have an account?     |
+|     Sign in                      |
++----------------------------------+
+```
+
+### Mobile (320px - 1023px)
+```
++--------------------+
+|     [Logo]         |
+|                    |
+|  Email   [______]  |
+|  Pass    [______]  |
+|  Confirm [______]  |
+|                    |
+|  [ Create Account ]|
+|                    |
+|  Sign in           |
++--------------------+
+```
+
+## Components
+
+### Form Fields
+
+| Field | Type | Validation | Error Message |
+|-------|------|------------|---------------|
+| Email | email input | Valid email format | Please enter a valid email |
+| Password | password input | Min 8 characters | Password must be at least 8 characters |
+| Confirm Password | password input | Must match password | Passwords do not match |
+
+### Buttons
+
+| Button | Action | State |
+|--------|--------|-------|
+| Create Account | Submit form | Disabled if form invalid |
+| Sign in | Navigate to /login | - |
+
+## States
+
+### Loading
+- Show spinner on button
+- Disable form inputs
+- Disable submit button
+
+### Error
+- Show error toast
+- Highlight duplicate email
+
+### Success
+- Redirect to /tasks
+- Auto-login after registration
+
+## Animations
+
+- Fade in on page load (300ms)
+- Smooth input transitions (150ms)
+- Button hover state (200ms)
+- Password match indicator (animated checkmark)
+
+## Theme
+
+- Background: #0a0a0f (dark)
+- Primary: #00f0ff (cyan neon)
+- Secondary: #ff00ff (magenta neon)
+- Text: #ffffff
+- Input background: #1a1a2e
+- Border: #2d2d44
