@@ -184,17 +184,18 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Start a new conversation on load
+  // Start a new conversation on load (after token is loaded)
   useEffect(() => {
-    if (!token) return;
+    const t = getToken();
+    if (!t) return;
 
     async function initConversation() {
       try {
-        const conv = await startConversation(token, {});
+        const conv = await startConversation(t, { language });
         setConversation(conv);
 
         // Load conversation with messages
-        const fullConv = await getConversation(token, conv.id);
+        const fullConv = await getConversation(t, conv.id);
         if (fullConv.messages) {
           setMessages(fullConv.messages);
         }
@@ -205,7 +206,7 @@ export default function ChatPage() {
     }
 
     void initConversation();
-  }, [token]);
+  }, []); // Run once on mount
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault();
