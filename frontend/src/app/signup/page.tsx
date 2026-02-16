@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Toast } from "@/components/Toast";
 import { TaskPilotLogo } from "@/components/brand/TaskPilotLogo";
-import { register } from "@/lib/api";
+import { register, login } from "@/lib/api";
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -49,8 +49,12 @@ export default function SignupPage() {
     setToast(null);
     try {
       await register(email, fullName, password);
-      setToast({ kind: "success", message: "Account created! Please sign in." });
-      router.push("/login");
+      setToast({ kind: "success", message: "Account created successfully!" });
+      // Store token and redirect to tasks
+      const loginResponse = await login(email, password);
+      const { setToken } = await import("@/lib/auth");
+      setToken(loginResponse.access_token);
+      router.push("/tasks");
     } catch (err) {
       const msg = typeof err === "object" && err && "detail" in err ? String((err as { detail: unknown }).detail) : "Sign up failed";
       setToast({ kind: "error", message: msg });
